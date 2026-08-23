@@ -62,6 +62,7 @@ function App() {
       return false
     }
 
+    setSelectedSquare(null)
     setGame({ fen: player.fen, history: player.history, uciHistory: player.uciHistory })
     if (saveResult(player)) return true
 
@@ -88,12 +89,12 @@ function App() {
     }
   }
 
-  function handleSquareTap(square: string) {
+  function handleSquareTap(square: string, isWhitePiece: boolean) {
     if (thinking) return
-    const { selected, move } = resolveTap(selectedSquare, square)
+    const { selected, move } = resolveTap(selectedSquare, square, isWhitePiece)
     setSelectedSquare(selected)
     if (!move) {
-      setNotice(`Selected ${square}. Choose a destination.`)
+      setNotice(selected ? `Selected ${selected}. Choose a destination.` : 'Tap one of your white pieces to select it.')
       return
     }
     void playTurn(move.from, move.to)
@@ -117,10 +118,7 @@ function App() {
               position,
               boardOrientation: 'white',
               canDragPiece: ({ piece }) => piece.pieceType.startsWith('w') && !thinking,
-              onPieceClick: ({ piece, square }) => {
-                if (piece.pieceType.startsWith('w') && square) handleSquareTap(square)
-              },
-              onSquareClick: ({ square }) => handleSquareTap(square),
+              onSquareClick: ({ piece, square }) => handleSquareTap(square, piece?.pieceType.startsWith('w') ?? false),
               onPieceDrop: ({ sourceSquare, targetSquare }) => {
                 if (!sourceSquare || !targetSquare) return false
                 void playTurn(sourceSquare, targetSquare)
