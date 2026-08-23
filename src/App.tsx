@@ -5,6 +5,7 @@ import { applyEngineMove, beginGame, isPlayersPiece, playMove, type GameState } 
 import { StockfishEngine } from './lib/engine'
 import { saveCompletedGame } from './lib/storage'
 import { resolveTap } from './lib/tapMove'
+import { describeGameResult } from './lib/resultMessage'
 import { createTapGuard } from './lib/tapGuard'
 import './App.css'
 
@@ -27,6 +28,7 @@ function App() {
   const [notice, setNotice] = useState('Stockfish is warming up. You play White.')
   const [thinking, setThinking] = useState(false)
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null)
+  const [completedResult, setCompletedResult] = useState<Extract<ReturnType<typeof playMove>, { accepted: true }> | null>(null)
   const engineRef = useRef<StockfishEngine | null>(null)
   const tapGuardRef = useRef(createTapGuard(250))
   const position = useMemo(() => positionFor(game), [game])
@@ -63,6 +65,7 @@ function App() {
     setGame(freshGame)
     setThinking(false)
     setSelectedSquare(null)
+    setCompletedResult(null)
     setNotice(color === 'w' ? 'Fresh board. You play White.' : 'Preparing Stockfish’s White opening…')
     if (color === 'b') void startBlackGame(freshGame)
   }
@@ -79,6 +82,7 @@ function App() {
       result: result.result,
       moves: result.history,
     })
+    setCompletedResult(result)
     setNotice(`Game complete: ${result.result}. Saved to your local database.`)
     return true
   }
@@ -141,6 +145,20 @@ function App() {
         </div>
         <button className="new-game" type="button" onClick={resetGame}>New game</button>
       </header>
+
+      {completedResult?.result && completedResult.termination && (() => {
+        const message = describeGameResult({ result: completedResult.result, termination: completedResult.termination }, playerColor)
+        return (
+          <section className="game-result" role="alert" aria-live="assertive">
+            <div>
+              <p className="section-label">GAME COMPLETE</p>
+              <h2>{message.title}</h2>
+              <p>{message.detail}</p>
+            </div>
+            <button className="new-game" type="button" onClick={resetGame}>Play again</button>
+          </section>
+        )
+      })()}
 
       <section className="game-layout" aria-label="Play chess">
         <div className="board-wrap">

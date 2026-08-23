@@ -1,4 +1,5 @@
 import { Chess, type Move, type Square } from 'chess.js'
+import type { GameTermination } from './resultMessage'
 
 export type GameState = {
   fen: string
@@ -13,8 +14,15 @@ export type MoveInput = {
 }
 
 export type MoveResult =
-  | { accepted: true; fen: string; san: string; history: string[]; uciHistory: string[]; result: '1-0' | '0-1' | '1/2-1/2' | null }
+  | { accepted: true; fen: string; san: string; history: string[]; uciHistory: string[]; result: '1-0' | '0-1' | '1/2-1/2' | null; termination: GameTermination | null }
   | { accepted: false; fen: string; history: string[]; uciHistory: string[] }
+
+function termination(board: Chess): GameTermination | null {
+  if (!board.isGameOver()) return null
+  if (board.isStalemate()) return 'stalemate'
+  if (board.isDraw()) return 'draw'
+  return 'checkmate'
+}
 
 function outcome(board: Chess, winner: 'w' | 'b'): '1-0' | '0-1' | '1/2-1/2' | null {
   if (!board.isGameOver()) return null
@@ -58,6 +66,7 @@ export function playMove(game: GameState, input: MoveInput, playerColor: 'w' | '
     history: [...game.history, move.san],
     uciHistory: [...game.uciHistory, toUci(move)],
     result: outcome(board, playerColor),
+    termination: termination(board),
   }
 }
 
@@ -75,6 +84,7 @@ export function applyEngineMove(game: GameState, uci: string, engineColor: 'w' |
       history: [...game.history, move.san],
       uciHistory: [...game.uciHistory, toUci(move)],
       result: outcome(board, engineColor),
+      termination: termination(board),
     }
   } catch {
     return { accepted: false, fen: game.fen, history: game.history, uciHistory: game.uciHistory }
