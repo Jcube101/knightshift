@@ -5,6 +5,7 @@ import { applyEngineMove, beginGame, isPlayersPiece, playMove, type GameState } 
 import { StockfishEngine } from './lib/engine'
 import { saveCompletedGame } from './lib/storage'
 import { resolveTap } from './lib/tapMove'
+import { createTapGuard } from './lib/tapGuard'
 import './App.css'
 
 const skillLevels: Record<string, { skillLevel: number; nodes: number }> = {
@@ -27,6 +28,7 @@ function App() {
   const [thinking, setThinking] = useState(false)
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null)
   const engineRef = useRef<StockfishEngine | null>(null)
+  const tapGuardRef = useRef(createTapGuard(250))
   const position = useMemo(() => positionFor(game), [game])
 
   useEffect(() => {
@@ -118,6 +120,7 @@ function App() {
   }
 
   function handleSquareTap(square: string) {
+    if (tapGuardRef.current.consumeIfSuppressed(Date.now())) return
     if (thinking) return
     const isWhitePiece = isPlayersPiece(game, square, playerColor)
     const { selected, move } = resolveTap(selectedSquare, square, isWhitePiece)
@@ -150,6 +153,7 @@ function App() {
               onSquareClick: ({ square }) => handleSquareTap(square),
               onPieceDrop: ({ sourceSquare, targetSquare }) => {
                 if (!sourceSquare || !targetSquare) return false
+                tapGuardRef.current.recordDrop(Date.now())
                 void playTurn(sourceSquare, targetSquare)
                 return true
               },

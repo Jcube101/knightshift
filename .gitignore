@@ -13,6 +13,10 @@ dist-ssr
 *.local
 .env
 .env.*
+.playwright-browsers/
+playwright-report/
+test-results/
+blob-report/
 
 # Editor directories and files
 .vscode/*
