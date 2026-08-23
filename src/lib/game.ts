@@ -1,4 +1,4 @@
-import { Chess, type Move } from 'chess.js'
+import { Chess, type Move, type Square } from 'chess.js'
 
 export type GameState = {
   fen: string
@@ -31,6 +31,10 @@ function restore(game: GameState): Chess {
   const board = new Chess(game.fen)
   for (const move of game.history) board.move(move)
   return board
+}
+
+export function isPlayersPiece(game: GameState, square: string, color: 'w' | 'b'): boolean {
+  return restore(game).get(square as Square)?.color === color
 }
 
 function toUci(move: Move): string {

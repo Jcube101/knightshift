@@ -1,7 +1,7 @@
 import { Chess } from 'chess.js'
 import { Chessboard } from 'react-chessboard'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { applyEngineMove, beginGame, playMove, type GameState } from './lib/game'
+import { applyEngineMove, beginGame, isPlayersPiece, playMove, type GameState } from './lib/game'
 import { StockfishEngine } from './lib/engine'
 import { saveCompletedGame } from './lib/storage'
 import { resolveTap } from './lib/tapMove'
@@ -89,8 +89,9 @@ function App() {
     }
   }
 
-  function handleSquareTap(square: string, isWhitePiece: boolean) {
+  function handleSquareTap(square: string) {
     if (thinking) return
+    const isWhitePiece = isPlayersPiece(game, square, 'w')
     const { selected, move } = resolveTap(selectedSquare, square, isWhitePiece)
     setSelectedSquare(selected)
     if (!move) {
@@ -118,7 +119,7 @@ function App() {
               position,
               boardOrientation: 'white',
               canDragPiece: ({ piece }) => piece.pieceType.startsWith('w') && !thinking,
-              onSquareClick: ({ piece, square }) => handleSquareTap(square, piece?.pieceType.startsWith('w') ?? false),
+              onSquareClick: ({ square }) => handleSquareTap(square),
               onPieceDrop: ({ sourceSquare, targetSquare }) => {
                 if (!sourceSquare || !targetSquare) return false
                 void playTurn(sourceSquare, targetSquare)

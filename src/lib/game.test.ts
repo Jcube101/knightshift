@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { applyEngineMove, beginGame, playMove } from './game'
+import { applyEngineMove, beginGame, isPlayersPiece, playMove } from './game'
 
 describe('playMove', () => {
   it('accepts a legal player move and records its UCI form for Stockfish', () => {
@@ -44,5 +44,13 @@ describe('playMove', () => {
     expect(result.accepted).toBe(false)
     expect(result.fen).toBe(game.fen)
     expect(result.uciHistory).toEqual(game.uciHistory)
+  })
+
+  it('identifies player-owned pieces from the canonical game position', () => {
+    const game = beginGame()
+
+    expect(isPlayersPiece(game, 'd2', 'w')).toBe(true)
+    expect(isPlayersPiece(game, 'd4', 'w')).toBe(false)
+    expect(isPlayersPiece(game, 'd7', 'w')).toBe(false)
   })
 })
