@@ -14,6 +14,19 @@ describe('playMove', () => {
     expect(result.botMove).toMatch(/^[a-h][1-8][a-h][1-8][qrbn]?$/)
   })
 
+  it('avoids repeating a recent bot reply when another legal move exists', () => {
+    const game = {
+      fen: 'r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 3 3',
+      history: [],
+    }
+
+    const result = playMove(game, { from: 'd2', to: 'd3' })
+
+    expect(result).toMatchObject({ accepted: true })
+    if (!result.accepted) throw new Error('expected legal move to be accepted')
+    expect(result.botMove).not.toBe('a8b8')
+  })
+
   it('reports a player checkmate as a completed win', () => {
     const game = { fen: '7k/5Q2/6K1/8/8/8/8/8 w - - 0 1', history: [] }
 

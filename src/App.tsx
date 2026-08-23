@@ -2,6 +2,7 @@ import { Chess } from 'chess.js'
 import { useMemo, useState } from 'react'
 import { beginGame, playMove, type GameState } from './lib/game'
 import { saveCompletedGame } from './lib/storage'
+import { boardGridStyle } from './lib/boardLayout'
 import './App.css'
 
 const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
@@ -70,7 +71,7 @@ function App() {
 
       <section className="game-layout" aria-label="Play chess">
         <div className="board-wrap">
-          <div className="board" aria-label="Chess board" role="grid">
+          <div className="board" style={boardGridStyle} aria-label="Chess board" role="grid">
             {board.flatMap((rank, rankIndex) => rank.map((piece, fileIndex) => {
               const square = `${files[fileIndex]}${ranks[rankIndex]}`
               const occupied = piece ? pieces[`${piece.color}${piece.type.toUpperCase()}`] : ''
