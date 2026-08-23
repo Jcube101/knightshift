@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { applyEngineMove, beginGame, isPlayersPiece, playMove } from './game'
+import { applyEngineMove, beginGame, isPlayersPiece, materialBalance, playMove } from './game'
 
 describe('playMove', () => {
   it('accepts a legal player move and records its UCI form for Stockfish', () => {
@@ -26,6 +26,15 @@ describe('playMove', () => {
     const result = playMove(beginGame(), { from: 'd2', to: 'd3' })
 
     expect(result).toMatchObject({ accepted: true, history: ['d3'], uciHistory: ['d2d3'] })
+  })
+
+  it('reports the captured piece and player-relative material balance', () => {
+    const game = { fen: '7k/8/8/4p3/3P4/8/8/K7 w - - 0 1', history: [], uciHistory: [] }
+
+    const result = playMove(game, { from: 'd4', to: 'e5' })
+
+    expect(result).toMatchObject({ accepted: true, captured: 'p' })
+    expect(materialBalance({ fen: result.fen, history: result.history, uciHistory: result.uciHistory }, 'w')).toBe(1)
   })
 
   it('reports a player checkmate as a completed win', () => {

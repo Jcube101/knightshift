@@ -1,13 +1,16 @@
 import { Chess } from 'chess.js'
 import { Chessboard } from 'react-chessboard'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { applyEngineMove, beginGame, isPlayersPiece, playMove, type GameState } from './lib/game'
+import { applyEngineMove, beginGame, isPlayersPiece, materialBalance, playMove, type GameState } from './lib/game'
 import { StockfishEngine } from './lib/engine'
 import { saveCompletedGame } from './lib/storage'
 import { resolveTap } from './lib/tapMove'
 import { describeGameResult } from './lib/resultMessage'
 import { createTapGuard } from './lib/tapGuard'
 import './App.css'
+
+const pieceLabels = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen' } as const
+const piecePoints = { p: 1, n: 3, b: 3, r: 5, q: 9 } as const
 
 const skillLevels: Record<string, { skillLevel: number; nodes: number }> = {
   Casual: { skillLevel: 3, nodes: 2_000 },
@@ -29,9 +32,11 @@ function App() {
   const [thinking, setThinking] = useState(false)
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null)
   const [completedResult, setCompletedResult] = useState<Extract<ReturnType<typeof playMove>, { accepted: true }> | null>(null)
+  const [lastCapture, setLastCapture] = useState<string | null>(null)
   const engineRef = useRef<StockfishEngine | null>(null)
   const tapGuardRef = useRef(createTapGuard(250))
   const position = useMemo(() => positionFor(game), [game])
+  const material = useMemo(() => materialBalance(game, playerColor), [game, playerColor])
 
   useEffect(() => {
     const engine = new StockfishEngine()
@@ -66,12 +71,18 @@ function App() {
     setThinking(false)
     setSelectedSquare(null)
     setCompletedResult(null)
+    setLastCapture(null)
     setNotice(color === 'w' ? 'Fresh board. You play White.' : 'Preparing Stockfish’s White opening…')
     if (color === 'b') void startBlackGame(freshGame)
   }
 
   function resetGame() {
     chooseSide(playerColor)
+  }
+
+  function recordCapture(captured: keyof typeof piecePoints | null, actor: 'You' | 'Stockfish') {
+    if (!captured) return
+    setLastCapture(`${actor} captured a ${pieceLabels[captured]}, +${piecePoints[captured]}`)
   }
 
   function saveResult(result: Extract<ReturnType<typeof playMove>, { accepted: true }>) {
@@ -98,6 +109,7 @@ function App() {
 
     setSelectedSquare(null)
     setGame({ fen: player.fen, history: player.history, uciHistory: player.uciHistory })
+    if (player.captured && player.captured !== 'k') recordCapture(player.captured, 'You')
     if (saveResult(player)) return true
 
     setThinking(true)
@@ -113,6 +125,7 @@ function App() {
       if (!bot.accepted) throw new Error(`Stockfish returned an illegal move: ${engineMove}`)
 
       setGame({ fen: bot.fen, history: bot.history, uciHistory: bot.uciHistory })
+      if (bot.captured && bot.captured !== 'k') recordCapture(bot.captured, 'Stockfish')
       if (!saveResult(bot)) setNotice(`Stockfish played ${bot.san}. Your move.`)
       return true
     } catch (error) {
@@ -201,6 +214,8 @@ function App() {
               <option>Steady</option>
               <option>Sharp</option>
             </select>
+            <p className="material-balance">Material: <strong>{material > 0 ? `+${material}` : material === 0 ? 'Even' : material}</strong></p>
+            {lastCapture && <p className="capture-note" aria-live="polite">{lastCapture}</p>}
             <div className="move-log" aria-label="Move history">
               {game.history.length === 0 ? <p>Moves will appear here.</p> : game.history.map((move, index) => <span key={`${move}-${index}`}>{index % 2 === 0 ? `${Math.floor(index / 2) + 1}. ${move}` : move}</span>)}
             </div>

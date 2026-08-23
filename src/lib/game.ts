@@ -1,4 +1,4 @@
-import { Chess, type Move, type Square } from 'chess.js'
+import { Chess, type Move, type PieceSymbol, type Square } from 'chess.js'
 import type { GameTermination } from './resultMessage'
 
 export type GameState = {
@@ -14,7 +14,7 @@ export type MoveInput = {
 }
 
 export type MoveResult =
-  | { accepted: true; fen: string; san: string; history: string[]; uciHistory: string[]; result: '1-0' | '0-1' | '1/2-1/2' | null; termination: GameTermination | null }
+  | { accepted: true; fen: string; san: string; history: string[]; uciHistory: string[]; captured: PieceSymbol | null; result: '1-0' | '0-1' | '1/2-1/2' | null; termination: GameTermination | null }
   | { accepted: false; fen: string; history: string[]; uciHistory: string[] }
 
 function termination(board: Chess): GameTermination | null {
@@ -45,6 +45,23 @@ export function isPlayersPiece(game: GameState, square: string, color: 'w' | 'b'
   return restore(game).get(square as Square)?.color === color
 }
 
+const materialValues: Record<PieceSymbol, number> = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 }
+
+export function materialBalance(game: GameState, playerColor: 'w' | 'b'): number {
+  let playerMaterial = 0
+  let opponentMaterial = 0
+
+  for (const rank of restore(game).board()) {
+    for (const piece of rank) {
+      if (!piece) continue
+      if (piece.color === playerColor) playerMaterial += materialValues[piece.type]
+      else opponentMaterial += materialValues[piece.type]
+    }
+  }
+
+  return playerMaterial - opponentMaterial
+}
+
 function toUci(move: Move): string {
   return `${move.from}${move.to}${move.promotion ?? ''}`
 }
@@ -65,6 +82,7 @@ export function playMove(game: GameState, input: MoveInput, playerColor: 'w' | '
     san: move.san,
     history: [...game.history, move.san],
     uciHistory: [...game.uciHistory, toUci(move)],
+    captured: move.captured ?? null,
     result: outcome(board, playerColor),
     termination: termination(board),
   }
@@ -83,6 +101,7 @@ export function applyEngineMove(game: GameState, uci: string, engineColor: 'w' |
       san: move.san,
       history: [...game.history, move.san],
       uciHistory: [...game.uciHistory, toUci(move)],
+      captured: move.captured ?? null,
       result: outcome(board, engineColor),
       termination: termination(board),
     }
