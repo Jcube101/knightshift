@@ -22,6 +22,7 @@ function positionFor(game: GameState): string {
 function App() {
   const [game, setGame] = useState<GameState>(beginGame)
   const [difficulty, setDifficulty] = useState('Steady')
+  const [playerColor, setPlayerColor] = useState<'w' | 'b'>('w')
   const [notice, setNotice] = useState('Stockfish is warming up. You play White.')
   const [thinking, setThinking] = useState(false)
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null)
@@ -34,11 +35,38 @@ function App() {
     return () => engine.terminate()
   }, [])
 
-  function resetGame() {
-    setGame(beginGame())
+  async function startBlackGame(freshGame: GameState) {
+    if (!engineRef.current) {
+      setNotice('Stockfish is still warming up. Try Black again in a moment.')
+      return
+    }
+    setThinking(true)
+    setNotice('Stockfish is opening as White…')
+    try {
+      const engineMove = await engineRef.current.bestMove({ fen: freshGame.fen, moves: [], ...skillLevels[difficulty] })
+      const opening = applyEngineMove(freshGame, engineMove, 'w')
+      if (!opening.accepted) throw new Error(`Stockfish returned an illegal opening move: ${engineMove}`)
+      setGame({ fen: opening.fen, history: opening.history, uciHistory: opening.uciHistory })
+      setNotice(`Stockfish played ${opening.san}. Your move as Black.`)
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Stockfish could not start the game.')
+    } finally {
+      setThinking(false)
+    }
+  }
+
+  function chooseSide(color: 'w' | 'b') {
+    const freshGame = beginGame()
+    setPlayerColor(color)
+    setGame(freshGame)
     setThinking(false)
     setSelectedSquare(null)
-    setNotice('Fresh board. You play White.')
+    setNotice(color === 'w' ? 'Fresh board. You play White.' : 'Preparing Stockfish’s White opening…')
+    if (color === 'b') void startBlackGame(freshGame)
+  }
+
+  function resetGame() {
+    chooseSide(playerColor)
   }
 
   function saveResult(result: Extract<ReturnType<typeof playMove>, { accepted: true }>) {
@@ -56,7 +84,7 @@ function App() {
   async function playTurn(sourceSquare: string, targetSquare: string): Promise<boolean> {
     if (thinking || !engineRef.current) return false
 
-    const player = playMove(game, { from: sourceSquare, to: targetSquare, promotion: 'q' })
+    const player = playMove(game, { from: sourceSquare, to: targetSquare, promotion: 'q' }, playerColor)
     if (!player.accepted) {
       setNotice('That move is not legal.')
       return false
@@ -75,7 +103,7 @@ function App() {
         moves: player.uciHistory,
         ...settings,
       })
-      const bot = applyEngineMove({ fen: player.fen, history: player.history, uciHistory: player.uciHistory }, engineMove)
+      const bot = applyEngineMove({ fen: player.fen, history: player.history, uciHistory: player.uciHistory }, engineMove, playerColor === 'w' ? 'b' : 'w')
       if (!bot.accepted) throw new Error(`Stockfish returned an illegal move: ${engineMove}`)
 
       setGame({ fen: bot.fen, history: bot.history, uciHistory: bot.uciHistory })
@@ -91,7 +119,7 @@ function App() {
 
   function handleSquareTap(square: string) {
     if (thinking) return
-    const isWhitePiece = isPlayersPiece(game, square, 'w')
+    const isWhitePiece = isPlayersPiece(game, square, playerColor)
     const { selected, move } = resolveTap(selectedSquare, square, isWhitePiece)
     setSelectedSquare(selected)
     if (!move) {
@@ -117,8 +145,8 @@ function App() {
             <Chessboard options={{
               id: 'knightshift-board',
               position,
-              boardOrientation: 'white',
-              canDragPiece: ({ piece }) => piece.pieceType.startsWith('w') && !thinking,
+              boardOrientation: playerColor === 'w' ? 'white' : 'black',
+              canDragPiece: ({ piece }) => piece.pieceType.startsWith(playerColor) && !thinking,
               onSquareClick: ({ square }) => handleSquareTap(square),
               onPieceDrop: ({ sourceSquare, targetSquare }) => {
                 if (!sourceSquare || !targetSquare) return false
@@ -140,6 +168,11 @@ function App() {
           <section className="panel-card">
             <p className="section-label">CURRENT GAME</p>
             <h2>{thinking ? 'Stockfish is thinking' : 'Play against Stockfish'}</h2>
+            <label htmlFor="side">Play as</label>
+            <select disabled={thinking} id="side" value={playerColor} onChange={(event) => chooseSide(event.target.value as 'w' | 'b')}>
+              <option value="w">White</option>
+              <option value="b">Black</option>
+            </select>
             <label htmlFor="difficulty">Engine difficulty</label>
             <select disabled={thinking} id="difficulty" value={difficulty} onChange={(event) => setDifficulty(event.target.value)}>
               <option>Casual</option>

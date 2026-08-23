@@ -41,7 +41,7 @@ function toUci(move: Move): string {
   return `${move.from}${move.to}${move.promotion ?? ''}`
 }
 
-export function playMove(game: GameState, input: MoveInput): MoveResult {
+export function playMove(game: GameState, input: MoveInput, playerColor: 'w' | 'b' = 'w'): MoveResult {
   const board = restore(game)
   let move: Move
 
@@ -57,11 +57,11 @@ export function playMove(game: GameState, input: MoveInput): MoveResult {
     san: move.san,
     history: [...game.history, move.san],
     uciHistory: [...game.uciHistory, toUci(move)],
-    result: outcome(board, 'w'),
+    result: outcome(board, playerColor),
   }
 }
 
-export function applyEngineMove(game: GameState, uci: string): MoveResult {
+export function applyEngineMove(game: GameState, uci: string, engineColor: 'w' | 'b' = 'b'): MoveResult {
   const board = restore(game)
   const match = /^([a-h][1-8])([a-h][1-8])([qrbn])?$/.exec(uci)
   if (!match) return { accepted: false, fen: game.fen, history: game.history, uciHistory: game.uciHistory }
@@ -74,7 +74,7 @@ export function applyEngineMove(game: GameState, uci: string): MoveResult {
       san: move.san,
       history: [...game.history, move.san],
       uciHistory: [...game.uciHistory, toUci(move)],
-      result: outcome(board, 'b'),
+      result: outcome(board, engineColor),
     }
   } catch {
     return { accepted: false, fen: game.fen, history: game.history, uciHistory: game.uciHistory }
