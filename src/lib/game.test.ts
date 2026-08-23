@@ -14,6 +14,14 @@ describe('playMove', () => {
     expect(result.botMove).toMatch(/^[a-h][1-8][a-h][1-8][qrbn]?$/)
   })
 
+  it('reports a player checkmate as a completed win', () => {
+    const game = { fen: '7k/5Q2/6K1/8/8/8/8/8 w - - 0 1', history: [] }
+
+    const result = playMove(game, { from: 'f7', to: 'g7' })
+
+    expect(result).toMatchObject({ accepted: true, botMove: null, result: '1-0' })
+  })
+
   it('rejects an illegal move without changing the position', () => {
     const game = beginGame()
 

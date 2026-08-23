@@ -1,6 +1,7 @@
 import { Chess } from 'chess.js'
 import { useMemo, useState } from 'react'
 import { beginGame, playMove, type GameState } from './lib/game'
+import { saveCompletedGame } from './lib/storage'
 import './App.css'
 
 const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
@@ -44,7 +45,17 @@ function App() {
     }
 
     setGame({ fen: game.fen, history: result.history })
-    setNotice(result.botMove ? `${result.san}. Bot replied ${result.botMove}.` : `${result.san}. Game complete.`)
+    if (result.result) {
+      saveCompletedGame({
+        id: crypto.randomUUID(),
+        playedAt: new Date().toISOString(),
+        result: result.result,
+        moves: result.history,
+      })
+      setNotice(`${result.san}. Game complete: ${result.result}. Saved to your local database.`)
+      return
+    }
+    setNotice(`${result.san}. Bot replied ${result.botMove}.`)
   }
 
   return (
