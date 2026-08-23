@@ -1,0 +1,5 @@
+Knightshift includes Stockfish 18 Lite WASM, distributed under the GNU General Public License version 3.0.
+
+Stockfish source: https://github.com/nmrugg/stockfish.js
+Knightshift source: https://github.com/Jcube101/knightshift
+Full license text: /stockfish/COPYING.txt

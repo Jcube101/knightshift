@@ -5,15 +5,17 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
-    "lint": "oxlint",
+    "build": "node scripts/stage-stockfish.mjs && tsc -b && vite build",
+    "lint": "oxlint --ignore-pattern 'public/**'",
     "preview": "vite preview",
     "test": "vitest run"
   },
   "dependencies": {
     "chess.js": "^1.4.0",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-chessboard": "^5.12.1",
+    "react-dom": "^19.2.8",
+    "stockfish": "^18.0.8"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^7.0.1",

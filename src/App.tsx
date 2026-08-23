@@ -1,62 +1,88 @@
 import { Chess } from 'chess.js'
-import { useMemo, useState } from 'react'
-import { beginGame, playMove, type GameState } from './lib/game'
+import { Chessboard } from 'react-chessboard'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { applyEngineMove, beginGame, playMove, type GameState } from './lib/game'
+import { StockfishEngine } from './lib/engine'
 import { saveCompletedGame } from './lib/storage'
-import { boardGridStyle } from './lib/boardLayout'
 import './App.css'
 
-const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
-const ranks = ['8', '7', '6', '5', '4', '3', '2', '1']
-const pieces: Record<string, string> = {
-  wK: '♔', wQ: '♕', wR: '♖', wB: '♗', wN: '♘', wP: '♙',
-  bK: '♚', bQ: '♛', bR: '♜', bB: '♝', bN: '♞', bP: '♟',
+const skillLevels: Record<string, { skillLevel: number; nodes: number }> = {
+  Casual: { skillLevel: 3, nodes: 2_000 },
+  Steady: { skillLevel: 8, nodes: 8_000 },
+  Sharp: { skillLevel: 14, nodes: 25_000 },
 }
 
-function boardFor(game: GameState) {
+function positionFor(game: GameState): string {
   const chess = new Chess(game.fen)
   for (const move of game.history) chess.move(move)
-  return chess.board()
+  return chess.fen()
 }
 
 function App() {
   const [game, setGame] = useState<GameState>(beginGame)
-  const [selected, setSelected] = useState<string | null>(null)
   const [difficulty, setDifficulty] = useState('Steady')
-  const [notice, setNotice] = useState('Your move. Choose a piece to begin.')
-  const board = useMemo(() => boardFor(game), [game])
+  const [notice, setNotice] = useState('Stockfish is warming up. You play White.')
+  const [thinking, setThinking] = useState(false)
+  const engineRef = useRef<StockfishEngine | null>(null)
+  const position = useMemo(() => positionFor(game), [game])
+
+  useEffect(() => {
+    const engine = new StockfishEngine()
+    engineRef.current = engine
+    return () => engine.terminate()
+  }, [])
 
   function resetGame() {
     setGame(beginGame())
-    setSelected(null)
+    setThinking(false)
     setNotice('Fresh board. You play White.')
   }
 
-  function chooseSquare(square: string) {
-    if (!selected) {
-      setSelected(square)
-      setNotice(`Selected ${square}. Choose a destination.`)
-      return
+  function saveResult(result: Extract<ReturnType<typeof playMove>, { accepted: true }>) {
+    if (!result.result) return false
+    saveCompletedGame({
+      id: crypto.randomUUID(),
+      playedAt: new Date().toISOString(),
+      result: result.result,
+      moves: result.history,
+    })
+    setNotice(`Game complete: ${result.result}. Saved to your local database.`)
+    return true
+  }
+
+  async function handlePieceDrop(sourceSquare: string, targetSquare: string): Promise<boolean> {
+    if (thinking || !engineRef.current) return false
+
+    const player = playMove(game, { from: sourceSquare, to: targetSquare, promotion: 'q' })
+    if (!player.accepted) {
+      setNotice('That move is not legal.')
+      return false
     }
 
-    const result = playMove(game, { from: selected, to: square, promotion: 'q' })
-    setSelected(null)
-    if (!result.accepted) {
-      setNotice('That move is not legal. Select a piece and try again.')
-      return
-    }
+    setGame({ fen: player.fen, history: player.history, uciHistory: player.uciHistory })
+    if (saveResult(player)) return true
 
-    setGame({ fen: game.fen, history: result.history })
-    if (result.result) {
-      saveCompletedGame({
-        id: crypto.randomUUID(),
-        playedAt: new Date().toISOString(),
-        result: result.result,
-        moves: result.history,
+    setThinking(true)
+    setNotice('Stockfish is calculating…')
+    try {
+      const settings = skillLevels[difficulty]
+      const engineMove = await engineRef.current.bestMove({
+        fen: game.fen,
+        moves: player.uciHistory,
+        ...settings,
       })
-      setNotice(`${result.san}. Game complete: ${result.result}. Saved to your local database.`)
-      return
+      const bot = applyEngineMove({ fen: player.fen, history: player.history, uciHistory: player.uciHistory }, engineMove)
+      if (!bot.accepted) throw new Error(`Stockfish returned an illegal move: ${engineMove}`)
+
+      setGame({ fen: bot.fen, history: bot.history, uciHistory: bot.uciHistory })
+      if (!saveResult(bot)) setNotice(`Stockfish played ${bot.san}. Your move.`)
+      return true
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Stockfish could not complete its move.')
+      return false
+    } finally {
+      setThinking(false)
     }
-    setNotice(`${result.san}. Bot replied ${result.botMove}.`)
   }
 
   return (
@@ -71,24 +97,23 @@ function App() {
 
       <section className="game-layout" aria-label="Play chess">
         <div className="board-wrap">
-          <div className="board" style={boardGridStyle} aria-label="Chess board" role="grid">
-            {board.flatMap((rank, rankIndex) => rank.map((piece, fileIndex) => {
-              const square = `${files[fileIndex]}${ranks[rankIndex]}`
-              const occupied = piece ? pieces[`${piece.color}${piece.type.toUpperCase()}`] : ''
-              return (
-                <button
-                  aria-label={`${square}${piece ? ` ${piece.color === 'w' ? 'white' : 'black'} ${piece.type}` : ''}`}
-                  className={`square ${(rankIndex + fileIndex) % 2 === 0 ? 'light' : 'dark'} ${selected === square ? 'selected' : ''}`}
-                  key={square}
-                  onClick={() => chooseSquare(square)}
-                  type="button"
-                >
-                  {fileIndex === 0 && <span className="rank-label">{ranks[rankIndex]}</span>}
-                  <span className={`piece ${piece?.color === 'b' ? 'black-piece' : ''}`}>{occupied}</span>
-                  {rankIndex === 7 && <span className="file-label">{files[fileIndex]}</span>}
-                </button>
-              )
-            }))}
+          <div className="engine-board" aria-label="Chess board">
+            <Chessboard options={{
+              id: 'knightshift-board',
+              position,
+              boardOrientation: 'white',
+              onPieceDrop: ({ sourceSquare, targetSquare }) => {
+                if (!sourceSquare || !targetSquare) return false
+                void handlePieceDrop(sourceSquare, targetSquare)
+                return true
+              },
+              showNotation: true,
+              showAnimations: true,
+              animationDurationInMs: 180,
+              boardStyle: { borderRadius: '10px', boxShadow: '0 18px 45px #0008' },
+              darkSquareStyle: { backgroundColor: '#769867' },
+              lightSquareStyle: { backgroundColor: '#dce6cb' },
+            }} />
           </div>
           <p className="board-status" role="status">{notice}</p>
         </div>
@@ -96,9 +121,9 @@ function App() {
         <aside className="side-panel">
           <section className="panel-card">
             <p className="section-label">CURRENT GAME</p>
-            <h2>Play against Knight</h2>
-            <label htmlFor="difficulty">Bot difficulty</label>
-            <select id="difficulty" value={difficulty} onChange={(event) => setDifficulty(event.target.value)}>
+            <h2>{thinking ? 'Stockfish is thinking' : 'Play against Stockfish'}</h2>
+            <label htmlFor="difficulty">Engine difficulty</label>
+            <select disabled={thinking} id="difficulty" value={difficulty} onChange={(event) => setDifficulty(event.target.value)}>
               <option>Casual</option>
               <option>Steady</option>
               <option>Sharp</option>
@@ -109,9 +134,9 @@ function App() {
           </section>
 
           <section className="panel-card muted-card">
-            <p className="section-label">COMING NEXT</p>
-            <h2>Your game intelligence</h2>
-            <p>Analysis, recurring patterns, and your opening repertoire will build from every completed game.</p>
+            <p className="section-label">ENGINE</p>
+            <h2>Stockfish 18 Lite</h2>
+            <p>Runs in your browser. Full move analysis and blunder detection are next.</p>
           </section>
         </aside>
       </section>
