@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { applyEngineMove, beginGame, playMove, type GameState } from './lib/game'
 import { StockfishEngine } from './lib/engine'
 import { saveCompletedGame } from './lib/storage'
+import { resolveTap } from './lib/tapMove'
 import './App.css'
 
 const skillLevels: Record<string, { skillLevel: number; nodes: number }> = {
@@ -23,6 +24,7 @@ function App() {
   const [difficulty, setDifficulty] = useState('Steady')
   const [notice, setNotice] = useState('Stockfish is warming up. You play White.')
   const [thinking, setThinking] = useState(false)
+  const [selectedSquare, setSelectedSquare] = useState<string | null>(null)
   const engineRef = useRef<StockfishEngine | null>(null)
   const position = useMemo(() => positionFor(game), [game])
 
@@ -35,6 +37,7 @@ function App() {
   function resetGame() {
     setGame(beginGame())
     setThinking(false)
+    setSelectedSquare(null)
     setNotice('Fresh board. You play White.')
   }
 
@@ -50,7 +53,7 @@ function App() {
     return true
   }
 
-  async function handlePieceDrop(sourceSquare: string, targetSquare: string): Promise<boolean> {
+  async function playTurn(sourceSquare: string, targetSquare: string): Promise<boolean> {
     if (thinking || !engineRef.current) return false
 
     const player = playMove(game, { from: sourceSquare, to: targetSquare, promotion: 'q' })
@@ -85,6 +88,17 @@ function App() {
     }
   }
 
+  function handleSquareTap(square: string) {
+    if (thinking) return
+    const { selected, move } = resolveTap(selectedSquare, square)
+    setSelectedSquare(selected)
+    if (!move) {
+      setNotice(`Selected ${square}. Choose a destination.`)
+      return
+    }
+    void playTurn(move.from, move.to)
+  }
+
   return (
     <main className="app-shell">
       <header className="topbar">
@@ -102,9 +116,14 @@ function App() {
               id: 'knightshift-board',
               position,
               boardOrientation: 'white',
+              canDragPiece: ({ piece }) => piece.pieceType.startsWith('w') && !thinking,
+              onPieceClick: ({ piece, square }) => {
+                if (piece.pieceType.startsWith('w') && square) handleSquareTap(square)
+              },
+              onSquareClick: ({ square }) => handleSquareTap(square),
               onPieceDrop: ({ sourceSquare, targetSquare }) => {
                 if (!sourceSquare || !targetSquare) return false
-                void handlePieceDrop(sourceSquare, targetSquare)
+                void playTurn(sourceSquare, targetSquare)
                 return true
               },
               showNotation: true,
