@@ -9,7 +9,7 @@
     "lint": "oxlint --ignore-pattern 'public/**' --ignore-pattern '.playwright-browsers/**'",
     "preview": "vite preview",
     "test": "vitest run src",
-    "test:e2e": "playwright test"
+    "test:e2e": "PLAYWRIGHT_BROWSERS_PATH=.playwright-browsers playwright test"
   },
   "dependencies": {
     "chess.js": "^1.4.0",
