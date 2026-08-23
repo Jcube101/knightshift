@@ -178,9 +178,9 @@ function App() {
               showNotation: true,
               showAnimations: true,
               animationDurationInMs: 180,
-              boardStyle: { borderRadius: '10px', boxShadow: '0 18px 45px #0008' },
-              darkSquareStyle: { backgroundColor: '#769867' },
-              lightSquareStyle: { backgroundColor: '#dce6cb' },
+              boardStyle: { borderRadius: '10px', boxShadow: '0 18px 45px #020817cc' },
+              darkSquareStyle: { backgroundColor: '#2e6fb4' },
+              lightSquareStyle: { backgroundColor: '#edf4fb' },
             }} />
           </div>
           <p className="board-status" role="status">{notice}</p>
