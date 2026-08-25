@@ -3,7 +3,7 @@ import { Chessboard } from 'react-chessboard'
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { applyEngineMove, beginGame, canUndoLastTurn, isPlayersPiece, materialBalance, playMove, undoLastTurn, type GameState } from './lib/game'
 import { StockfishEngine } from './lib/engine'
-import { saveCompletedGame } from './lib/storage'
+import { clearActiveGame, loadActiveGame, saveActiveGame, saveCompletedGame } from './lib/storage'
 import { resolveTap } from './lib/tapMove'
 import { describeGameResult } from './lib/resultMessage'
 import { createTapGuard } from './lib/tapGuard'
@@ -26,14 +26,15 @@ function positionFor(game: GameState): string {
 }
 
 function App() {
-  const [game, setGame] = useState<GameState>(beginGame)
-  const [difficulty, setDifficulty] = useState('Steady')
-  const [playerColor, setPlayerColor] = useState<'w' | 'b'>('w')
-  const [notice, setNotice] = useState('Stockfish is warming up. You play White.')
+  const [restoredActiveGame] = useState(loadActiveGame)
+  const [game, setGame] = useState<GameState>(() => restoredActiveGame?.game ?? beginGame())
+  const [difficulty, setDifficulty] = useState(() => restoredActiveGame?.difficulty ?? 'Steady')
+  const [playerColor, setPlayerColor] = useState<'w' | 'b'>(() => restoredActiveGame?.playerColor ?? 'w')
+  const [notice, setNotice] = useState(() => restoredActiveGame ? 'Restored your active game. Your move.' : 'Stockfish is warming up. You play White.')
   const [thinking, setThinking] = useState(false)
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null)
   const [completedResult, setCompletedResult] = useState<Extract<ReturnType<typeof playMove>, { accepted: true }> | null>(null)
-  const [lastCapture, setLastCapture] = useState<string | null>(null)
+  const [lastCapture, setLastCapture] = useState<string | null>(() => restoredActiveGame?.lastCapture ?? null)
   const [theme, setTheme] = useState<ThemeId>(readTheme)
   const engineRef = useRef<StockfishEngine | null>(null)
   const tapGuardRef = useRef(createTapGuard(250))
@@ -50,6 +51,11 @@ function App() {
     engineRef.current = engine
     return () => engine.terminate()
   }, [])
+
+  useEffect(() => {
+    if (thinking || completedResult) return
+    saveActiveGame({ game, playerColor, difficulty, lastCapture })
+  }, [completedResult, difficulty, game, lastCapture, playerColor, thinking])
 
   async function startBlackGame(freshGame: GameState) {
     if (!engineRef.current) {
@@ -73,6 +79,7 @@ function App() {
 
   function chooseSide(color: 'w' | 'b') {
     const freshGame = beginGame()
+    clearActiveGame()
     setPlayerColor(color)
     setGame(freshGame)
     setThinking(false)
@@ -108,6 +115,7 @@ function App() {
 
   function saveResult(result: Extract<ReturnType<typeof playMove>, { accepted: true }>) {
     if (!result.result) return false
+    clearActiveGame()
     saveCompletedGame({
       id: crypto.randomUUID(),
       playedAt: new Date().toISOString(),
