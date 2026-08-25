@@ -10,6 +10,10 @@ describe('parseBestMove', () => {
     expect(parseScore('info depth 12 score cp -143 pv e7e5 g1f3')).toEqual({ centipawns: -143, bestMove: 'e7e5' })
   })
 
+  it('accepts a terminal mate score even when Stockfish has no principal variation', () => {
+    expect(parseScore('info depth 0 score mate 0')).toEqual({ centipawns: 0, bestMove: null })
+  })
+
   it('returns null for non-final engine output', () => {
     expect(parseBestMove('info depth 8 score cp 32 pv e7e5 g1f3')).toBeNull()
   })

@@ -1,7 +1,10 @@
-export function parseScore(line: string): { centipawns: number; bestMove: string } | null {
-  const match = /\bscore cp (-?\d+)\b.*\bpv ([a-h][1-8][a-h][1-8][qrbn]?)/.exec(line)
-  if (!match) return null
-  return { centipawns: Number(match[1]), bestMove: match[2] }
+export function parseScore(line: string): { centipawns: number; bestMove: string | null } | null {
+  const score = /\bscore (cp|mate) (-?\d+)\b/.exec(line)
+  if (!score) return null
+  const value = Number(score[2])
+  const centipawns = score[1] === 'cp' ? value : Math.sign(value) * (100_000 - Math.min(Math.abs(value) * 100, 99_000))
+  const principalVariation = /\bpv ([a-h][1-8][a-h][1-8][qrbn]?)/.exec(line)
+  return { centipawns, bestMove: principalVariation?.[1] ?? null }
 }
 
 export function parseBestMove(line: string): string | null {
@@ -48,9 +51,9 @@ export class StockfishEngine {
     })
   }
 
-  analyse({ fen, moves, skillLevel, nodes }: EngineOptions): Promise<{ centipawns: number; bestMove: string }> {
+  analyse({ fen, moves, skillLevel, nodes }: EngineOptions): Promise<{ centipawns: number; bestMove: string | null }> {
     return new Promise((resolve, reject) => {
-      let latestScore: { centipawns: number; bestMove: string } | null = null
+      let latestScore: { centipawns: number; bestMove: string | null } | null = null
       const timeout = window.setTimeout(() => {
         this.worker.removeEventListener('message', handleMessage)
         reject(new Error('Stockfish did not finish analysis in time.'))

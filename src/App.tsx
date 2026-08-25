@@ -141,7 +141,7 @@ function App() {
       for (let index = playerColor === 'w' ? 0 : 1; index < game.history.length; index += 2) {
         const before = await engineRef.current.analyse({ fen: game.fen, moves: game.uciHistory.slice(0, index), skillLevel: 12, nodes: 1_500 })
         const after = await engineRef.current.analyse({ fen: game.fen, moves: game.uciHistory.slice(0, index + 1), skillLevel: 12, nodes: 1_500 })
-        candidates.push({ moveNumber: Math.floor(index / 2) + 1, played: game.history[index], best: before.bestMove, loss: Math.max(0, before.centipawns + after.centipawns) })
+        candidates.push({ moveNumber: Math.floor(index / 2) + 1, played: game.history[index], best: before.bestMove ?? 'No continuation available', loss: Math.max(0, before.centipawns + after.centipawns) })
       }
       setAnalysis(selectCriticalMoments(candidates))
       setNotice('Post-game review complete.')
