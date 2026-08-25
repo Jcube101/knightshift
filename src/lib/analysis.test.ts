@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { selectCriticalMoments } from './analysis'
+import { positionBeforeMove, selectCriticalMoments } from './analysis'
 
 describe('selectCriticalMoments', () => {
   it('returns the three largest meaningful player evaluation drops', () => {
@@ -13,5 +13,9 @@ describe('selectCriticalMoments', () => {
 
     expect(moments.map((moment) => moment.played)).toEqual(['g4', 'Qh5', 'Bf4'])
     expect(moments[0].label).toBe('Major tactical loss')
+  })
+
+  it('recreates the board position immediately before the reviewed move', () => {
+    expect(positionBeforeMove('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', ['e4', 'e5', 'Nf3'], 2)).toBe('rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2')
   })
 })

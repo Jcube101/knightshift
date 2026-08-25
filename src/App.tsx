@@ -5,7 +5,7 @@ import { applyEngineMove, beginGame, canUndoLastTurn, isPlayersPiece, materialBa
 import { StockfishEngine } from './lib/engine'
 import { clearActiveGame, loadActiveGame, saveActiveGame, saveCompletedGame } from './lib/storage'
 import { resolveTap } from './lib/tapMove'
-import { selectCriticalMoments, type CriticalMoment } from './lib/analysis'
+import { positionBeforeMove, selectCriticalMoments, type CriticalMoment } from './lib/analysis'
 import { describeGameResult } from './lib/resultMessage'
 import { createTapGuard } from './lib/tapGuard'
 import { readTheme, saveTheme, themeOptions, themes, type ThemeId } from './lib/theme'
@@ -26,6 +26,18 @@ function positionFor(game: GameState): string {
   return chess.fen()
 }
 
+function reviewSquareStyles(moment: CriticalMoment): Record<string, CSSProperties> {
+  const styles: Record<string, CSSProperties> = {}
+  const highlight = (move: string | undefined, color: string) => {
+    if (!move || !/^[a-h][1-8][a-h][1-8][qrbn]?$/.test(move)) return
+    styles[move.slice(0, 2)] = { backgroundColor: color }
+    styles[move.slice(2, 4)] = { backgroundColor: color }
+  }
+  highlight(moment.playedUci, 'rgba(220, 70, 70, .55)')
+  highlight(moment.best, 'rgba(65, 175, 115, .55)')
+  return styles
+}
+
 function App() {
   const [restoredActiveGame] = useState(loadActiveGame)
   const [game, setGame] = useState<GameState>(() => restoredActiveGame?.game ?? beginGame())
@@ -39,6 +51,7 @@ function App() {
   const [theme, setTheme] = useState<ThemeId>(readTheme)
   const [analysis, setAnalysis] = useState<CriticalMoment[] | null>(null)
   const [analysing, setAnalysing] = useState(false)
+  const [selectedMoment, setSelectedMoment] = useState<CriticalMoment | null>(null)
   const engineRef = useRef<StockfishEngine | null>(null)
   const tapGuardRef = useRef(createTapGuard(250))
   const position = useMemo(() => positionFor(game), [game])
@@ -89,6 +102,7 @@ function App() {
     setSelectedSquare(null)
     setCompletedResult(null)
     setAnalysis(null)
+    setSelectedMoment(null)
     setAnalysing(false)
     setLastCapture(null)
     setNotice(color === 'w' ? 'Fresh board. You play White.' : 'Preparing Stockfish’s White opening…')
@@ -141,9 +155,11 @@ function App() {
       for (let index = playerColor === 'w' ? 0 : 1; index < game.history.length; index += 2) {
         const before = await engineRef.current.analyse({ fen: game.fen, moves: game.uciHistory.slice(0, index), skillLevel: 12, nodes: 1_500 })
         const after = await engineRef.current.analyse({ fen: game.fen, moves: game.uciHistory.slice(0, index + 1), skillLevel: 12, nodes: 1_500 })
-        candidates.push({ moveNumber: Math.floor(index / 2) + 1, played: game.history[index], best: before.bestMove ?? 'No continuation available', loss: Math.max(0, before.centipawns + after.centipawns) })
+        candidates.push({ moveNumber: Math.floor(index / 2) + 1, moveIndex: index, beforeFen: positionBeforeMove(game.fen, game.history, index), played: game.history[index], playedUci: game.uciHistory[index], best: before.bestMove ?? 'No continuation available', loss: Math.max(0, before.centipawns + after.centipawns) })
       }
-      setAnalysis(selectCriticalMoments(candidates))
+      const moments = selectCriticalMoments(candidates)
+      setAnalysis(moments)
+      setSelectedMoment(moments[0] ?? null)
       setNotice('Post-game review complete.')
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Stockfish could not complete the review.')
@@ -236,7 +252,15 @@ function App() {
       {analysis && <section className="analysis-card" aria-live="polite">
         <p className="section-label">POST-GAME REVIEW</p>
         <h2>{analysis.length ? 'Your critical moments' : 'No major mistakes found'}</h2>
-        {analysis.length ? <ol>{analysis.map((moment) => <li key={`${moment.moveNumber}-${moment.played}`}><strong>Move {moment.moveNumber}: {moment.played}</strong><span>{moment.label}, preferred: {moment.best}</span><p>{moment.explanation}</p></li>)}</ol> : <p>Stockfish found no player moves with a meaningful evaluation drop at this review depth.</p>}
+        {analysis.length ? <>
+          <div className="moment-picker">
+            {analysis.map((moment) => <button className={selectedMoment === moment ? 'moment-button selected' : 'moment-button'} key={`${moment.moveNumber}-${moment.played}`} onClick={() => setSelectedMoment(moment)} type="button">Move {moment.moveNumber}: {moment.played}</button>)}
+          </div>
+          {selectedMoment?.beforeFen && <div className="review-detail">
+            <div className="review-board"><Chessboard options={{ id: 'analysis-board', position: selectedMoment.beforeFen, boardOrientation: playerColor === 'w' ? 'white' : 'black', showNotation: true, squareStyles: reviewSquareStyles(selectedMoment) }} /></div>
+            <div><p className="section-label">MOVE {selectedMoment.moveNumber}</p><h3>You played {selectedMoment.played}</h3><p className="review-copy">Red shows your move. Green shows Stockfish’s alternative: <strong>{selectedMoment.best}</strong>.</p><p className="review-copy">{selectedMoment.explanation}</p><p className="takeaway"><strong>Takeaway:</strong> Before committing, compare your move with checks, captures, and threats for both sides.</p></div>
+          </div>}
+        </> : <p>Stockfish found no player moves with a meaningful evaluation drop at this review depth.</p>}
       </section>}
 
       <section className="game-layout" aria-label="Play chess">
