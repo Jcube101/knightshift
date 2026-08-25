@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { applyEngineMove, beginGame, isPlayersPiece, materialBalance, playMove } from './game'
+import { applyEngineMove, beginGame, isPlayersPiece, materialBalance, playMove, undoLastTurn } from './game'
 
 describe('playMove', () => {
   it('accepts a legal player move and records its UCI form for Stockfish', () => {
@@ -20,6 +20,26 @@ describe('playMove', () => {
     const result = applyEngineMove({ fen: afterPlayerMove.fen, history: afterPlayerMove.history, uciHistory: afterPlayerMove.uciHistory }, 'e7e5')
 
     expect(result).toMatchObject({ accepted: true, san: 'e5', uciHistory: ['e2e4', 'e7e5'] })
+  })
+
+  it('undoes a White player turn and its Stockfish reply', () => {
+    const player = playMove(beginGame(), { from: 'e2', to: 'e4' })
+    if (!player.accepted) throw new Error('expected legal move to be accepted')
+    const engine = applyEngineMove({ fen: player.fen, history: player.history, uciHistory: player.uciHistory }, 'e7e5')
+    if (!engine.accepted) throw new Error('expected legal engine move to be accepted')
+
+    expect(undoLastTurn({ fen: engine.fen, history: engine.history, uciHistory: engine.uciHistory }, 'w')).toEqual(beginGame())
+  })
+
+  it('preserves Stockfish’s opening move when undoing as Black', () => {
+    const opening = applyEngineMove(beginGame(), 'e2e4', 'w')
+    if (!opening.accepted) throw new Error('expected legal opening move')
+    const player = playMove({ fen: opening.fen, history: opening.history, uciHistory: opening.uciHistory }, { from: 'c7', to: 'c5' }, 'b')
+    if (!player.accepted) throw new Error('expected legal Black move')
+    const engine = applyEngineMove({ fen: player.fen, history: player.history, uciHistory: player.uciHistory }, 'g1f3', 'w')
+    if (!engine.accepted) throw new Error('expected legal engine move')
+
+    expect(undoLastTurn({ fen: engine.fen, history: engine.history, uciHistory: engine.uciHistory }, 'b')).toMatchObject({ history: ['e4'], uciHistory: ['e2e4'] })
   })
 
   it('waits for the engine instead of selecting a local heuristic reply', () => {

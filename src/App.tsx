@@ -1,7 +1,7 @@
 import { Chess } from 'chess.js'
 import { Chessboard } from 'react-chessboard'
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import { applyEngineMove, beginGame, isPlayersPiece, materialBalance, playMove, type GameState } from './lib/game'
+import { applyEngineMove, beginGame, canUndoLastTurn, isPlayersPiece, materialBalance, playMove, undoLastTurn, type GameState } from './lib/game'
 import { StockfishEngine } from './lib/engine'
 import { saveCompletedGame } from './lib/storage'
 import { resolveTap } from './lib/tapMove'
@@ -39,6 +39,7 @@ function App() {
   const tapGuardRef = useRef(createTapGuard(250))
   const position = useMemo(() => positionFor(game), [game])
   const material = useMemo(() => materialBalance(game, playerColor), [game, playerColor])
+  const canUndo = !thinking && !completedResult && canUndoLastTurn(game, playerColor)
   const palette = themes[theme]
   const themeStyle = {
     '--theme-background': palette.background, '--theme-glow': palette.glow, '--theme-panel': palette.panel, '--theme-muted-panel': palette.mutedPanel, '--theme-border': palette.border, '--theme-text': palette.text, '--theme-soft-text': palette.softText, '--theme-eyebrow': palette.eyebrow, '--theme-action': palette.action, '--theme-action-text': palette.actionText,
@@ -89,6 +90,15 @@ function App() {
 
   function resetGame() {
     chooseSide(playerColor)
+  }
+
+  function undoTurn() {
+    const previousGame = undoLastTurn(game, playerColor)
+    if (!previousGame) return
+    setGame(previousGame)
+    setSelectedSquare(null)
+    setLastCapture(null)
+    setNotice('Undid your last turn. Your move.')
   }
 
   function recordCapture(captured: keyof typeof piecePoints | null, actor: 'You' | 'Stockfish') {
@@ -167,7 +177,10 @@ function App() {
           <p className="eyebrow">PERSONAL CHESS WORKSPACE</p>
           <h1>Knightshift</h1>
         </div>
-        <button className="new-game" type="button" onClick={resetGame}>New game</button>
+        <div className="game-actions">
+          <button className="undo-game" disabled={!canUndo} type="button" onClick={undoTurn}>Undo last turn</button>
+          <button className="new-game" type="button" onClick={resetGame}>New game</button>
+        </div>
       </header>
 
       {completedResult?.result && completedResult.termination && (() => {

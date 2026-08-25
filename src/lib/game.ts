@@ -45,6 +45,20 @@ export function isPlayersPiece(game: GameState, square: string, color: 'w' | 'b'
   return restore(game).get(square as Square)?.color === color
 }
 
+export function canUndoLastTurn(game: GameState, playerColor: 'w' | 'b'): boolean {
+  const minimumMoves = playerColor === 'w' ? 2 : 3
+  return game.history.length >= minimumMoves
+}
+
+export function undoLastTurn(game: GameState, playerColor: 'w' | 'b'): GameState | null {
+  if (!canUndoLastTurn(game, playerColor)) return null
+  return {
+    fen: game.fen,
+    history: game.history.slice(0, -2),
+    uciHistory: game.uciHistory.slice(0, -2),
+  }
+}
+
 const materialValues: Record<PieceSymbol, number> = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 }
 
 export function materialBalance(game: GameState, playerColor: 'w' | 'b'): number {

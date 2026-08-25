@@ -16,6 +16,7 @@ describe('Knightshift home', () => {
 
     expect(screen.getByRole('heading', { name: 'Knightshift' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'New game' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Undo last turn' })).toBeDisabled()
     expect(screen.getByLabelText('Engine difficulty')).toBeInTheDocument()
     expect(screen.getByLabelText('Chess board')).toBeInTheDocument()
   })
