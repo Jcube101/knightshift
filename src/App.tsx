@@ -5,6 +5,7 @@ import { applyEngineMove, beginGame, canUndoLastTurn, isPlayersPiece, materialBa
 import { StockfishEngine } from './lib/engine'
 import { clearActiveGame, loadActiveGame, saveActiveGame, saveCompletedGame } from './lib/storage'
 import { resolveTap } from './lib/tapMove'
+import { selectCriticalMoments, type CriticalMoment } from './lib/analysis'
 import { describeGameResult } from './lib/resultMessage'
 import { createTapGuard } from './lib/tapGuard'
 import { readTheme, saveTheme, themeOptions, themes, type ThemeId } from './lib/theme'
@@ -36,6 +37,8 @@ function App() {
   const [completedResult, setCompletedResult] = useState<Extract<ReturnType<typeof playMove>, { accepted: true }> | null>(null)
   const [lastCapture, setLastCapture] = useState<string | null>(() => restoredActiveGame?.lastCapture ?? null)
   const [theme, setTheme] = useState<ThemeId>(readTheme)
+  const [analysis, setAnalysis] = useState<CriticalMoment[] | null>(null)
+  const [analysing, setAnalysing] = useState(false)
   const engineRef = useRef<StockfishEngine | null>(null)
   const tapGuardRef = useRef(createTapGuard(250))
   const position = useMemo(() => positionFor(game), [game])
@@ -85,6 +88,8 @@ function App() {
     setThinking(false)
     setSelectedSquare(null)
     setCompletedResult(null)
+    setAnalysis(null)
+    setAnalysing(false)
     setLastCapture(null)
     setNotice(color === 'w' ? 'Fresh board. You play White.' : 'Preparing Stockfish’s White opening…')
     if (color === 'b') void startBlackGame(freshGame)
@@ -125,6 +130,26 @@ function App() {
     setCompletedResult(result)
     setNotice(`Game complete: ${result.result}. Saved to your local database.`)
     return true
+  }
+
+  async function analyseGame() {
+    if (!engineRef.current || analysing) return
+    setAnalysing(true)
+    setNotice('Stockfish is reviewing your critical moments…')
+    try {
+      const candidates = []
+      for (let index = playerColor === 'w' ? 0 : 1; index < game.history.length; index += 2) {
+        const before = await engineRef.current.analyse({ fen: game.fen, moves: game.uciHistory.slice(0, index), skillLevel: 12, nodes: 1_500 })
+        const after = await engineRef.current.analyse({ fen: game.fen, moves: game.uciHistory.slice(0, index + 1), skillLevel: 12, nodes: 1_500 })
+        candidates.push({ moveNumber: Math.floor(index / 2) + 1, played: game.history[index], best: before.bestMove, loss: Math.max(0, before.centipawns + after.centipawns) })
+      }
+      setAnalysis(selectCriticalMoments(candidates))
+      setNotice('Post-game review complete.')
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Stockfish could not complete the review.')
+    } finally {
+      setAnalysing(false)
+    }
   }
 
   async function playTurn(sourceSquare: string, targetSquare: string): Promise<boolean> {
@@ -200,10 +225,19 @@ function App() {
               <h2>{message.title}</h2>
               <p>{message.detail}</p>
             </div>
-            <button className="new-game" type="button" onClick={resetGame}>Play again</button>
+            <div className="game-actions">
+              <button className="undo-game" disabled={analysing} type="button" onClick={() => void analyseGame()}>{analysing ? 'Analyzing…' : 'Analyze game'}</button>
+              <button className="new-game" type="button" onClick={resetGame}>Play again</button>
+            </div>
           </section>
         )
       })()}
+
+      {analysis && <section className="analysis-card" aria-live="polite">
+        <p className="section-label">POST-GAME REVIEW</p>
+        <h2>{analysis.length ? 'Your critical moments' : 'No major mistakes found'}</h2>
+        {analysis.length ? <ol>{analysis.map((moment) => <li key={`${moment.moveNumber}-${moment.played}`}><strong>Move {moment.moveNumber}: {moment.played}</strong><span>{moment.label}, preferred: {moment.best}</span><p>{moment.explanation}</p></li>)}</ol> : <p>Stockfish found no player moves with a meaningful evaluation drop at this review depth.</p>}
+      </section>}
 
       <section className="game-layout" aria-label="Play chess">
         <div className="board-wrap">
