@@ -10,7 +10,7 @@ Current scope:
 
 - In-browser games against Stockfish
 - White and Black play
-- Browser-local completed-game storage
+- Browser-local active-game and completed-game storage
 - Mobile-first board interaction
 
 Planned, not yet built:
@@ -28,7 +28,7 @@ Do not add accounts, cloud sync, PGN import, social features, or external chess-
 3. **The selected side is game state.** White/Black choice must control board orientation, input ownership, terminal-result attribution, and who makes the first engine move.
 4. **The canonical game position owns piece identity.** Do not trust `react-chessboard` callback piece data during animations or touch transitions.
 5. **Mobile interactions are release-critical.** Preserve both tap-to-move and drag-to-move. A successful drag must not leave its destination selected by a trailing tap.
-6. **Keep browser persistence local.** Current completed-game data lives in `localStorage` under `knightshift.completed-games`.
+6. **Keep browser persistence local and versioned.** Completed games live under `knightshift.completed-games`; the reload-safe active-game checkpoint lives under `knightshift.active-game`. Preserve legacy completed-game reads when evolving this schema.
 
 ## Key files
 

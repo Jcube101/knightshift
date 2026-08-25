@@ -11,7 +11,7 @@ Knightshift is a private, local-first chess improvement workspace. Play Stockfis
 - When playing Black, Stockfish makes the opening White move before input is enabled
 - Three real engine levels: Casual, Steady, and Sharp
 - Mobile tap-to-move and desktop/mobile drag-to-move
-- Completed games saved in browser `localStorage`
+- Completed games and active games saved in browser `localStorage`
 - No account, backend, cloud engine, or game import required
 
 ## Stack
@@ -85,13 +85,11 @@ Ownership always comes from the canonical `chess.js` position, not a transient c
 
 ### Storage
 
-Completed games are saved only in the browser under:
+Knightshift uses versioned browser-local storage. Completed games persist under `knightshift.completed-games`, while the current active-game checkpoint is stored under `knightshift.active-game`. The completed-game reader supports the legacy array format and writes version 1 envelopes going forward.
 
-```text
-knightshift.completed-games
-```
+An active checkpoint captures the position, SAN/UCI history, player side, difficulty, and latest capture cue. It is restored after a browser reload. The active checkpoint is cleared only when the player deliberately starts a new game or completes one; completed games remain saved.
 
-Clearing site storage clears saved games. There is no sync or account system yet.
+Clearing site storage clears saved games and the active checkpoint. There is no sync or account system yet.
 
 ## Deployment
 
