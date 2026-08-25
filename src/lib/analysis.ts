@@ -8,6 +8,8 @@ export type CandidateMoment = {
   moveIndex?: number
   beforeFen?: string
   playedUci?: string
+  afterFen?: string
+  replyUci?: string
 }
 
 export type CriticalMoment = CandidateMoment & {
@@ -28,6 +30,21 @@ export function moveToSan(fen: string, uci: string): string {
     return chess.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] }).san
   } catch {
     return uci
+  }
+}
+
+const pieceNames = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen' } as const
+
+export function describeReply(fen: string, uci: string): string | null {
+  if (!/^[a-h][1-8][a-h][1-8][qrbn]?$/.test(uci)) return null
+  const chess = new Chess(fen)
+  try {
+    const move = chess.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] })
+    if (move.captured && move.captured !== 'k') return `${move.san} wins your ${pieceNames[move.captured]}.`
+    if (move.san.endsWith('+') || move.san.endsWith('#')) return `${move.san} gives check.`
+    return `${move.san} is Stockfish’s best reply.`
+  } catch {
+    return null
   }
 }
 

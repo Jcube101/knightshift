@@ -5,7 +5,7 @@ import { applyEngineMove, beginGame, canUndoLastTurn, isPlayersPiece, materialBa
 import { StockfishEngine } from './lib/engine'
 import { clearActiveGame, loadActiveGame, saveActiveGame, saveCompletedGame } from './lib/storage'
 import { resolveTap } from './lib/tapMove'
-import { moveToSan, positionBeforeMove, selectCriticalMoments, type CriticalMoment } from './lib/analysis'
+import { describeReply, moveToSan, positionBeforeMove, selectCriticalMoments, type CriticalMoment } from './lib/analysis'
 import { describeGameResult } from './lib/resultMessage'
 import { createTapGuard } from './lib/tapGuard'
 import { readTheme, saveTheme, themeOptions, themes, type ThemeId } from './lib/theme'
@@ -155,7 +155,7 @@ function App() {
       for (let index = playerColor === 'w' ? 0 : 1; index < game.history.length; index += 2) {
         const before = await engineRef.current.analyse({ fen: game.fen, moves: game.uciHistory.slice(0, index), skillLevel: 12, nodes: 1_500 })
         const after = await engineRef.current.analyse({ fen: game.fen, moves: game.uciHistory.slice(0, index + 1), skillLevel: 12, nodes: 1_500 })
-        candidates.push({ moveNumber: Math.floor(index / 2) + 1, moveIndex: index, beforeFen: positionBeforeMove(game.fen, game.history, index), played: game.history[index], playedUci: game.uciHistory[index], best: before.bestMove ?? 'No continuation available', loss: Math.max(0, before.centipawns + after.centipawns) })
+        candidates.push({ moveNumber: Math.floor(index / 2) + 1, moveIndex: index, beforeFen: positionBeforeMove(game.fen, game.history, index), afterFen: positionBeforeMove(game.fen, game.history, index + 1), played: game.history[index], playedUci: game.uciHistory[index], replyUci: after.bestMove ?? undefined, best: before.bestMove ?? 'No continuation available', loss: Math.max(0, before.centipawns + after.centipawns) })
       }
       const moments = selectCriticalMoments(candidates)
       setAnalysis(moments)
@@ -262,7 +262,7 @@ function App() {
               <p className="review-legend"><span className="legend-played">Red</span> your move <span className="legend-best">Green</span> better option</p>
               <p className="section-label">MOVE {selectedMoment.moveNumber}</p>
               <h3>Instead of {selectedMoment.played}, try {moveToSan(selectedMoment.beforeFen, selectedMoment.best)}</h3>
-              <p className="review-copy"><strong>{selectedMoment.label}.</strong> {selectedMoment.explanation}</p>
+              <p className="review-copy"><strong>{selectedMoment.label}.</strong> {selectedMoment.afterFen && selectedMoment.replyUci ? describeReply(selectedMoment.afterFen, selectedMoment.replyUci) ?? selectedMoment.explanation : selectedMoment.explanation}</p>
             </div>
           </div>}
         </> : <p>Stockfish found no player moves with a meaningful evaluation drop at this review depth.</p>}
