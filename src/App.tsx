@@ -5,7 +5,7 @@ import { applyEngineMove, beginGame, canUndoLastTurn, isPlayersPiece, materialBa
 import { StockfishEngine } from './lib/engine'
 import { clearActiveGame, loadActiveGame, saveActiveGame, saveCompletedGame } from './lib/storage'
 import { resolveTap } from './lib/tapMove'
-import { positionBeforeMove, selectCriticalMoments, type CriticalMoment } from './lib/analysis'
+import { moveToSan, positionBeforeMove, selectCriticalMoments, type CriticalMoment } from './lib/analysis'
 import { describeGameResult } from './lib/resultMessage'
 import { createTapGuard } from './lib/tapGuard'
 import { readTheme, saveTheme, themeOptions, themes, type ThemeId } from './lib/theme'
@@ -258,7 +258,12 @@ function App() {
           </div>
           {selectedMoment?.beforeFen && <div className="review-detail">
             <div className="review-board"><Chessboard options={{ id: 'analysis-board', position: selectedMoment.beforeFen, boardOrientation: playerColor === 'w' ? 'white' : 'black', showNotation: true, squareStyles: reviewSquareStyles(selectedMoment) }} /></div>
-            <div><p className="section-label">MOVE {selectedMoment.moveNumber}</p><h3>You played {selectedMoment.played}</h3><p className="review-copy">Red shows your move. Green shows Stockfish’s alternative: <strong>{selectedMoment.best}</strong>.</p><p className="review-copy">{selectedMoment.explanation}</p><p className="takeaway"><strong>Takeaway:</strong> Before committing, compare your move with checks, captures, and threats for both sides.</p></div>
+            <div>
+              <p className="review-legend"><span className="legend-played">Red</span> your move <span className="legend-best">Green</span> better option</p>
+              <p className="section-label">MOVE {selectedMoment.moveNumber}</p>
+              <h3>Instead of {selectedMoment.played}, try {moveToSan(selectedMoment.beforeFen, selectedMoment.best)}</h3>
+              <p className="review-copy"><strong>{selectedMoment.label}.</strong> {selectedMoment.explanation}</p>
+            </div>
           </div>}
         </> : <p>Stockfish found no player moves with a meaningful evaluation drop at this review depth.</p>}
       </section>}
