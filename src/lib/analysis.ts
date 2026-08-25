@@ -13,6 +13,7 @@ export type CandidateMoment = {
 }
 
 export type CriticalMoment = CandidateMoment & {
+  rank: number
   label: 'Major tactical loss' | 'Significant mistake' | 'Missed opportunity'
   explanation: string
 }
@@ -55,9 +56,10 @@ export function positionBeforeMove(initialFen: string, history: string[], moveIn
 }
 
 export function selectCriticalMoments(candidates: CandidateMoment[]): CriticalMoment[] {
-  return candidates
+  const strongest = candidates
     .filter((candidate) => candidate.loss >= 75)
     .toSorted((left, right) => right.loss - left.loss)
     .slice(0, 3)
-    .map((candidate) => ({ ...candidate, ...classify(candidate.loss) }))
+    .map((candidate, index) => ({ ...candidate, rank: index + 1, ...classify(candidate.loss) }))
+  return strongest.toSorted((left, right) => left.moveNumber - right.moveNumber)
 }

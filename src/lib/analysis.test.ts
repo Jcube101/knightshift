@@ -11,8 +11,9 @@ describe('selectCriticalMoments', () => {
       { moveNumber: 27, played: 'a3', best: 'h3', loss: 76 },
     ])
 
-    expect(moments.map((moment) => moment.played)).toEqual(['g4', 'Qh5', 'Bf4'])
-    expect(moments[0].label).toBe('Major tactical loss')
+    expect(moments.map((moment) => moment.played)).toEqual(['Qh5', 'g4', 'Bf4'])
+    expect(moments.map((moment) => moment.rank)).toEqual([2, 1, 3])
+    expect(moments[1].label).toBe('Major tactical loss')
   })
 
   it('translates a Stockfish coordinate move into readable chess notation', () => {

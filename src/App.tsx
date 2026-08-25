@@ -159,7 +159,7 @@ function App() {
       }
       const moments = selectCriticalMoments(candidates)
       setAnalysis(moments)
-      setSelectedMoment(moments[0] ?? null)
+      setSelectedMoment(moments.find((moment) => moment.rank === 1) ?? null)
       setNotice('Post-game review complete.')
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Stockfish could not complete the review.')
@@ -254,7 +254,7 @@ function App() {
         <h2>{analysis.length ? 'Your critical moments' : 'No major mistakes found'}</h2>
         {analysis.length ? <>
           <div className="moment-picker">
-            {analysis.map((moment) => <button className={selectedMoment === moment ? 'moment-button selected' : 'moment-button'} key={`${moment.moveNumber}-${moment.played}`} onClick={() => setSelectedMoment(moment)} type="button">Move {moment.moveNumber}: {moment.played}</button>)}
+            {analysis.map((moment) => <button className={selectedMoment === moment ? 'moment-button selected' : 'moment-button'} key={`${moment.moveNumber}-${moment.played}`} onClick={() => setSelectedMoment(moment)} type="button">Move {moment.moveNumber}: {moment.played} · #{moment.rank}{moment.rank === 1 ? ' biggest' : ''}</button>)}
           </div>
           {selectedMoment?.beforeFen && <div className="review-detail">
             <div className="review-board"><Chessboard options={{ id: 'analysis-board', position: selectedMoment.beforeFen, boardOrientation: playerColor === 'w' ? 'white' : 'black', showNotation: true, squareStyles: reviewSquareStyles(selectedMoment) }} /></div>
