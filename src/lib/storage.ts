@@ -1,3 +1,4 @@
+import type { CriticalMoment } from './analysis'
 import type { GameState } from './game'
 
 export type SavedGame = {
@@ -5,6 +6,10 @@ export type SavedGame = {
   playedAt: string
   result: '1-0' | '0-1' | '1/2-1/2'
   moves: string[]
+  playerColor?: 'w' | 'b'
+  difficulty?: string
+  analysis?: CriticalMoment[]
+  analysisVersion?: 1
 }
 
 export type ActiveGame = {

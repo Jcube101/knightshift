@@ -35,6 +35,12 @@ describe('completed-game storage', () => {
     expect(loadSavedGames().map((game) => game.id)).toEqual(['completed'])
   })
 
+  it('stores analysis only for newly analysed games', () => {
+    saveCompletedGame({ id: 'analysed', playedAt: '2026-08-24T09:00:00.000Z', result: '1-0', moves: ['e4'], playerColor: 'w', difficulty: 'Steady', analysis: [], analysisVersion: 1 })
+
+    expect(loadSavedGames()[0]).toMatchObject({ id: 'analysed', playerColor: 'w', difficulty: 'Steady', analysis: [], analysisVersion: 1 })
+  })
+
   it('reads completed games saved in the legacy array format', () => {
     localStorage.setItem('knightshift.completed-games', JSON.stringify([{ id: 'legacy', playedAt: '2026-08-22T09:00:00.000Z', result: '1-0', moves: ['e4'] }]))
 

@@ -3,9 +3,10 @@ import { Chessboard } from 'react-chessboard'
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { applyEngineMove, beginGame, canUndoLastTurn, isPlayersPiece, materialBalance, playMove, undoLastTurn, type GameState } from './lib/game'
 import { StockfishEngine } from './lib/engine'
-import { clearActiveGame, loadActiveGame, saveActiveGame, saveCompletedGame } from './lib/storage'
+import { clearActiveGame, loadActiveGame, loadSavedGames, saveActiveGame, saveCompletedGame, type SavedGame } from './lib/storage'
 import { resolveTap } from './lib/tapMove'
 import { describeReply, moveToSan, positionBeforeMove, selectCriticalMoments, type CriticalMoment } from './lib/analysis'
+import { summarizeInsights } from './lib/insights'
 import { describeGameResult } from './lib/resultMessage'
 import { createTapGuard } from './lib/tapGuard'
 import { readTheme, saveTheme, themeOptions, themes, type ThemeId } from './lib/theme'
@@ -52,10 +53,14 @@ function App() {
   const [analysis, setAnalysis] = useState<CriticalMoment[] | null>(null)
   const [analysing, setAnalysing] = useState(false)
   const [selectedMoment, setSelectedMoment] = useState<CriticalMoment | null>(null)
+  const [reviewColor, setReviewColor] = useState<'w' | 'b'>(() => restoredActiveGame?.playerColor ?? 'w')
+  const [savedGames, setSavedGames] = useState<SavedGame[]>(loadSavedGames)
   const engineRef = useRef<StockfishEngine | null>(null)
+  const savedGameRef = useRef<SavedGame | null>(null)
   const tapGuardRef = useRef(createTapGuard(250))
   const position = useMemo(() => positionFor(game), [game])
   const material = useMemo(() => materialBalance(game, playerColor), [game, playerColor])
+  const insights = useMemo(() => summarizeInsights(savedGames.filter((savedGame) => savedGame.analysisVersion === 1 && savedGame.analysis)), [savedGames])
   const canUndo = !thinking && !completedResult && canUndoLastTurn(game, playerColor)
   const palette = themes[theme]
   const themeStyle = {
@@ -97,12 +102,14 @@ function App() {
     const freshGame = beginGame()
     clearActiveGame()
     setPlayerColor(color)
+    setReviewColor(color)
     setGame(freshGame)
     setThinking(false)
     setSelectedSquare(null)
     setCompletedResult(null)
     setAnalysis(null)
     setSelectedMoment(null)
+    savedGameRef.current = null
     setAnalysing(false)
     setLastCapture(null)
     setNotice(color === 'w' ? 'Fresh board. You play White.' : 'Preparing Stockfish’s White opening…')
@@ -135,12 +142,17 @@ function App() {
   function saveResult(result: Extract<ReturnType<typeof playMove>, { accepted: true }>) {
     if (!result.result) return false
     clearActiveGame()
-    saveCompletedGame({
+    const savedGame: SavedGame = {
       id: crypto.randomUUID(),
       playedAt: new Date().toISOString(),
       result: result.result,
       moves: result.history,
-    })
+      playerColor,
+      difficulty,
+    }
+    saveCompletedGame(savedGame)
+    savedGameRef.current = savedGame
+    setSavedGames(loadSavedGames())
     setCompletedResult(result)
     setNotice(`Game complete: ${result.result}. Saved to your local database.`)
     return true
@@ -160,6 +172,13 @@ function App() {
       const moments = selectCriticalMoments(candidates)
       setAnalysis(moments)
       setSelectedMoment(moments.find((moment) => moment.rank === 1) ?? null)
+      setReviewColor(playerColor)
+      if (savedGameRef.current) {
+        const analysedGame = { ...savedGameRef.current, analysis: moments, analysisVersion: 1 as const }
+        saveCompletedGame(analysedGame)
+        savedGameRef.current = analysedGame
+        setSavedGames(loadSavedGames())
+      }
       setNotice('Post-game review complete.')
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Stockfish could not complete the review.')
@@ -257,7 +276,7 @@ function App() {
             {analysis.map((moment) => <button className={selectedMoment === moment ? 'moment-button selected' : 'moment-button'} key={`${moment.moveNumber}-${moment.played}`} onClick={() => setSelectedMoment(moment)} type="button">Move {moment.moveNumber}: {moment.played} · #{moment.rank}{moment.rank === 1 ? ' biggest' : ''}</button>)}
           </div>
           {selectedMoment?.beforeFen && <div className="review-detail">
-            <div className="review-board"><Chessboard options={{ id: 'analysis-board', position: selectedMoment.beforeFen, boardOrientation: playerColor === 'w' ? 'white' : 'black', showNotation: true, squareStyles: reviewSquareStyles(selectedMoment) }} /></div>
+            <div className="review-board"><Chessboard options={{ id: 'analysis-board', position: selectedMoment.beforeFen, boardOrientation: reviewColor === 'w' ? 'white' : 'black', showNotation: true, squareStyles: reviewSquareStyles(selectedMoment) }} /></div>
             <div>
               <p className="review-legend"><span className="legend-played">Red</span> your move <span className="legend-best">Green</span> better option</p>
               <p className="section-label">MOVE {selectedMoment.moveNumber}</p>
@@ -267,6 +286,12 @@ function App() {
           </div>}
         </> : <p>Stockfish found no player moves with a meaningful evaluation drop at this review depth.</p>}
       </section>}
+
+      <section className="insights-card">
+        <p className="section-label">IMPROVEMENT HISTORY</p>
+        <h2>Saved games and patterns</h2>
+        {savedGames.filter((savedGame) => savedGame.playerColor).length ? <><div className="insight-list">{insights.length ? insights.map((insight) => <p key={insight.kind}><strong>{insight.count}</strong> {insight.label.toLowerCase()}</p>) : <p>Analyse a completed game to start spotting patterns.</p>}</div><div className="saved-games">{savedGames.filter((savedGame) => savedGame.playerColor).map((savedGame) => <article key={savedGame.id}><strong>{new Date(savedGame.playedAt).toLocaleDateString()}</strong><span>You played {savedGame.playerColor === 'w' ? 'White' : 'Black'} · {savedGame.moves.length} plies · {savedGame.result}</span>{savedGame.analysis ? <button className="saved-review-button" onClick={() => { setAnalysis(savedGame.analysis ?? null); setSelectedMoment(savedGame.analysis?.find((moment) => moment.rank === 1) ?? null); setReviewColor(savedGame.playerColor ?? 'w') }} type="button">Open saved review · {savedGame.analysis.length} moments</button> : <span>Waiting for analysis</span>}</article>)}</div></> : <p className="review-copy">New analysed games will appear here. Older saved games remain archived and are excluded from patterns.</p>}
+      </section>
 
       <section className="game-layout" aria-label="Play chess">
         <div className="board-wrap">
@@ -323,7 +348,7 @@ function App() {
           <section className="panel-card muted-card">
             <p className="section-label">ENGINE</p>
             <h2>Stockfish 18 Lite</h2>
-            <p>Runs in your browser. Full move analysis and blunder detection are next.</p>
+            <p>Runs in your browser. Review completed games to build your local improvement history.</p>
           </section>
         </aside>
       </section>
