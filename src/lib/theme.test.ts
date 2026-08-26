@@ -1,13 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { defaultTheme, themeOptions, themes } from './theme'
 
-describe('Knightshift themes', () => {
-  it('offers the four supported colour schemes', () => {
-    expect(themeOptions.map((theme) => theme.id)).toEqual(['green', 'rwb', 'royal', 'amber'])
-  })
-
-  it('uses the red, white, and blue scheme by default', () => {
-    expect(defaultTheme).toBe('rwb')
-    expect(themes.royal.boardDark).not.toBe(themes.amber.boardDark)
+describe('Knightshift theme', () => {
+  it('uses one fixed Quiet Study palette', () => {
+    expect(themeOptions.map((theme) => theme.id)).toEqual(['quiet-study'])
+    expect(defaultTheme).toBe('quiet-study')
+    expect(themes['quiet-study'].background).toBe('#111813')
   })
 })

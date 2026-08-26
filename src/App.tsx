@@ -5,7 +5,7 @@ import { loadActiveGame, loadSavedGames } from './lib/storage'
 import { summarizeInsights } from './lib/insights'
 import { describeReply, moveToSan, type CriticalMoment } from './lib/analysis'
 import { rankLabel } from './lib/review'
-import { readTheme, saveTheme, themeOptions, themes, type ThemeId } from './lib/theme'
+import { readTheme, themes } from './lib/theme'
 import PlayScreen from './screens/PlayScreen'
 import './App.css'
 
@@ -32,9 +32,9 @@ function History() {
 }
 
 function Settings() {
- const [theme, setTheme] = useState<ThemeId>(readTheme); const [defaults, setDefaults] = useState<Defaults>(readDefaults)
+ const [defaults, setDefaults] = useState<Defaults>(readDefaults)
  function update(next: Partial<Defaults>) { const saved = { ...defaults, ...next }; setDefaults(saved); localStorage.setItem(defaultsKey, JSON.stringify(saved)) }
- return <Shell><section className="route-card"><p className="section-label">DEFAULTS</p><h1>Settings</h1><label htmlFor="theme">Theme</label><select id="theme" value={theme} onChange={event => { const value = event.target.value as ThemeId; setTheme(value); saveTheme(value) }}>{themeOptions.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}</select><label htmlFor="default-side">Default side</label><select id="default-side" value={defaults.side} onChange={event => update({ side: event.target.value as 'w' | 'b' })}><option value="w">White</option><option value="b">Black</option></select><label htmlFor="default-difficulty">Default difficulty</label><select id="default-difficulty" value={defaults.difficulty} onChange={event => update({ difficulty: event.target.value as Defaults['difficulty'] })}><option>Casual</option><option>Steady</option><option>Sharp</option></select><p className="review-copy">These defaults apply to your next new game. Your completed games and active game remain local to this browser.</p></section></Shell>
+ return <Shell><section className="route-card"><p className="section-label">DEFAULTS</p><h1>Settings</h1><p className="review-copy">Quiet Study is Knightshift’s fixed visual system.</p><label htmlFor="default-side">Default side</label><select id="default-side" value={defaults.side} onChange={event => update({ side: event.target.value as 'w' | 'b' })}><option value="w">White</option><option value="b">Black</option></select><label htmlFor="default-difficulty">Default difficulty</label><select id="default-difficulty" value={defaults.difficulty} onChange={event => update({ difficulty: event.target.value as Defaults['difficulty'] })}><option>Casual</option><option>Steady</option><option>Sharp</option></select><p className="review-copy">These defaults apply to your next new game. Your completed games and active game remain local to this browser.</p></section></Shell>
 }
 
 function reviewSquareStyles(moment: CriticalMoment): Record<string, CSSProperties> {
