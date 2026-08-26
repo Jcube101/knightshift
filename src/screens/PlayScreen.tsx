@@ -16,6 +16,8 @@ import '../App.css'
 const pieceLabels = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen' } as const
 const piecePoints = { p: 1, n: 3, b: 3, r: 5, q: 9 } as const
 
+const difficultyOptions = ['Casual', 'Steady', 'Sharp'] as const
+
 const skillLevels: Record<string, { skillLevel: number; nodes: number }> = {
   Casual: { skillLevel: 3, nodes: 2_000 },
   Steady: { skillLevel: 8, nodes: 8_000 },
@@ -260,57 +262,28 @@ function PlayScreen() {
 
       <section className="game-layout" aria-label="Play chess">
         <div className="board-wrap">
+          <div className="board-context">
+            <p className="material-balance">Material <strong>{material > 0 ? `+${material}` : material === 0 ? 'Even' : material}</strong></p>
+            <div className="move-log" aria-label="Move history">
+              {game.history.length === 0 ? <span>Moves will appear here.</span> : game.history.map((move, index) => <span key={`${move}-${index}`}>{index % 2 === 0 ? `${Math.floor(index / 2) + 1}. ${move}` : move}</span>)}
+            </div>
+          </div>
           <div className="engine-board" aria-label="Chess board">
             <Chessboard options={{
-              id: 'knightshift-board',
-              position,
-              boardOrientation: playerColor === 'w' ? 'white' : 'black',
-              canDragPiece: ({ piece }) => piece.pieceType.startsWith(playerColor) && !thinking,
-              onSquareClick: ({ square }) => handleSquareTap(square),
-              onPieceDrop: ({ sourceSquare, targetSquare }) => {
-                if (!sourceSquare || !targetSquare) return false
-                tapGuardRef.current.recordDrop(Date.now())
-                void playTurn(sourceSquare, targetSquare)
-                return true
-              },
-              showNotation: true,
-              showAnimations: true,
-              animationDurationInMs: 180,
-              boardStyle: { borderRadius: '10px', boxShadow: `0 18px 45px ${palette.shadow}` },
-              darkSquareStyle: { backgroundColor: palette.boardDark },
-              lightSquareStyle: { backgroundColor: palette.boardLight },
+              id: 'knightshift-board', position, boardOrientation: playerColor === 'w' ? 'white' : 'black', canDragPiece: ({ piece }) => piece.pieceType.startsWith(playerColor) && !thinking, onSquareClick: ({ square }) => handleSquareTap(square), onPieceDrop: ({ sourceSquare, targetSquare }) => { if (!sourceSquare || !targetSquare) return false; tapGuardRef.current.recordDrop(Date.now()); void playTurn(sourceSquare, targetSquare); return true }, showNotation: true, showAnimations: true, animationDurationInMs: 180, boardStyle: { borderRadius: '10px', boxShadow: `0 18px 45px ${palette.shadow}` }, darkSquareStyle: { backgroundColor: palette.boardDark }, lightSquareStyle: { backgroundColor: palette.boardLight },
             }} />
           </div>
           <p className="board-status" role="status">{notice}</p>
+          {lastCapture && <p className="capture-note" aria-live="polite">{lastCapture}</p>}
         </div>
 
-        <aside className="side-panel">
-          <section className="panel-card">
-            <p className="section-label">CURRENT GAME</p>
-            <h2>{thinking ? 'Stockfish is thinking' : 'Play against Stockfish'}</h2>
-            <label htmlFor="side">Play as</label>
-            <select disabled={thinking} id="side" value={playerColor} onChange={(event) => chooseSide(event.target.value as 'w' | 'b')}>
-              <option value="w">White</option>
-              <option value="b">Black</option>
-            </select>
-            <label htmlFor="difficulty">Engine difficulty</label>
-            <select disabled={thinking} id="difficulty" value={difficulty} onChange={(event) => setDifficulty(event.target.value)}>
-              <option>Casual</option>
-              <option>Steady</option>
-              <option>Sharp</option>
-            </select>
-            <p className="material-balance">Material: <strong>{material > 0 ? `+${material}` : material === 0 ? 'Even' : material}</strong></p>
-            {lastCapture && <p className="capture-note" aria-live="polite">{lastCapture}</p>}
-            <div className="move-log" aria-label="Move history">
-              {game.history.length === 0 ? <p>Moves will appear here.</p> : game.history.map((move, index) => <span key={`${move}-${index}`}>{index % 2 === 0 ? `${Math.floor(index / 2) + 1}. ${move}` : move}</span>)}
-            </div>
-          </section>
-
-          <section className="panel-card muted-card">
-            <p className="section-label">ENGINE</p>
-            <h2>Stockfish 18 Lite</h2>
-            <p>Runs in your browser. Review completed games to build your local improvement history.</p>
-          </section>
+        <aside className="side-panel play-controls">
+          <fieldset disabled={thinking} aria-label="Play as" className="side-toggle">
+            <legend>Play as</legend>
+            <button className={playerColor === 'w' ? 'selected' : ''} type="button" onClick={() => chooseSide('w')}>White</button>
+            <button className={playerColor === 'b' ? 'selected' : ''} type="button" onClick={() => chooseSide('b')}>Black</button>
+          </fieldset>
+          <label className="difficulty-control" htmlFor="difficulty">Engine difficulty <strong>{difficulty}</strong><input disabled={thinking} id="difficulty" type="range" min="0" max="2" step="1" value={difficultyOptions.indexOf(difficulty as typeof difficultyOptions[number])} onChange={(event) => setDifficulty(difficultyOptions[Number(event.target.value)])} /><span><em>Casual</em><em>Steady</em><em>Sharp</em></span></label>
         </aside>
       </section>
     </main>
