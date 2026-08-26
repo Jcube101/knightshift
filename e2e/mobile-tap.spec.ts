@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 
 test('a mobile tap sequence plays a legal pawn move', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/play')
 
   for (const square of ['d2', 'd4']) {
     const box = await page.locator(`[data-square="${square}"]`).boundingBox()

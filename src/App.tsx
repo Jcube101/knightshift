@@ -1,359 +1,45 @@
-import { Chess } from 'chess.js'
 import { Chessboard } from 'react-chessboard'
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import { applyEngineMove, beginGame, canUndoLastTurn, isPlayersPiece, materialBalance, playMove, undoLastTurn, type GameState } from './lib/game'
-import { StockfishEngine } from './lib/engine'
-import { clearActiveGame, loadActiveGame, loadSavedGames, saveActiveGame, saveCompletedGame, type SavedGame } from './lib/storage'
-import { resolveTap } from './lib/tapMove'
-import { describeReply, moveToSan, positionBeforeMove, selectCriticalMoments, type CriticalMoment } from './lib/analysis'
+import { BrowserRouter, Link, NavLink, Route, Routes, useParams } from 'react-router-dom'
+import { useState, type CSSProperties } from 'react'
+import { loadActiveGame, loadSavedGames } from './lib/storage'
 import { summarizeInsights } from './lib/insights'
-import { describeGameResult } from './lib/resultMessage'
-import { createTapGuard } from './lib/tapGuard'
+import { moveToSan, type CriticalMoment } from './lib/analysis'
 import { readTheme, saveTheme, themeOptions, themes, type ThemeId } from './lib/theme'
+import PlayScreen from './screens/PlayScreen'
 import './App.css'
 
-const pieceLabels = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen' } as const
-const piecePoints = { p: 1, n: 3, b: 3, r: 5, q: 9 } as const
+const defaultsKey = 'knightshift.defaults'
+type Defaults = { side: 'w' | 'b'; difficulty: 'Casual' | 'Steady' | 'Sharp' }
+function readDefaults(): Defaults { try { return { side: 'w', difficulty: 'Steady', ...JSON.parse(localStorage.getItem(defaultsKey) ?? '{}') } } catch { return { side: 'w', difficulty: 'Steady' } } }
 
-const skillLevels: Record<string, { skillLevel: number; nodes: number }> = {
-  Casual: { skillLevel: 3, nodes: 2_000 },
-  Steady: { skillLevel: 8, nodes: 8_000 },
-  Sharp: { skillLevel: 14, nodes: 25_000 },
-}
-
-function positionFor(game: GameState): string {
-  const chess = new Chess(game.fen)
-  for (const move of game.history) chess.move(move)
-  return chess.fen()
-}
-
-function reviewSquareStyles(moment: CriticalMoment): Record<string, CSSProperties> {
-  const styles: Record<string, CSSProperties> = {}
-  const highlight = (move: string | undefined, color: string) => {
-    if (!move || !/^[a-h][1-8][a-h][1-8][qrbn]?$/.test(move)) return
-    styles[move.slice(0, 2)] = { backgroundColor: color }
-    styles[move.slice(2, 4)] = { backgroundColor: color }
-  }
-  highlight(moment.playedUci, 'rgba(220, 70, 70, .55)')
-  highlight(moment.best, 'rgba(65, 175, 115, .55)')
-  return styles
-}
-
-function App() {
-  const [restoredActiveGame] = useState(loadActiveGame)
-  const [game, setGame] = useState<GameState>(() => restoredActiveGame?.game ?? beginGame())
-  const [difficulty, setDifficulty] = useState(() => restoredActiveGame?.difficulty ?? 'Steady')
-  const [playerColor, setPlayerColor] = useState<'w' | 'b'>(() => restoredActiveGame?.playerColor ?? 'w')
-  const [notice, setNotice] = useState(() => restoredActiveGame ? 'Restored your active game. Your move.' : 'Stockfish is warming up. You play White.')
-  const [thinking, setThinking] = useState(false)
-  const [selectedSquare, setSelectedSquare] = useState<string | null>(null)
-  const [completedResult, setCompletedResult] = useState<Extract<ReturnType<typeof playMove>, { accepted: true }> | null>(null)
-  const [lastCapture, setLastCapture] = useState<string | null>(() => restoredActiveGame?.lastCapture ?? null)
-  const [theme, setTheme] = useState<ThemeId>(readTheme)
-  const [analysis, setAnalysis] = useState<CriticalMoment[] | null>(null)
-  const [analysing, setAnalysing] = useState(false)
-  const [selectedMoment, setSelectedMoment] = useState<CriticalMoment | null>(null)
-  const [reviewColor, setReviewColor] = useState<'w' | 'b'>(() => restoredActiveGame?.playerColor ?? 'w')
-  const [savedGames, setSavedGames] = useState<SavedGame[]>(loadSavedGames)
-  const engineRef = useRef<StockfishEngine | null>(null)
-  const savedGameRef = useRef<SavedGame | null>(null)
-  const tapGuardRef = useRef(createTapGuard(250))
-  const position = useMemo(() => positionFor(game), [game])
-  const material = useMemo(() => materialBalance(game, playerColor), [game, playerColor])
-  const insights = useMemo(() => summarizeInsights(savedGames.filter((savedGame) => savedGame.analysisVersion === 1 && savedGame.analysis)), [savedGames])
-  const canUndo = !thinking && !completedResult && canUndoLastTurn(game, playerColor)
+function Shell({ children }: { children: React.ReactNode }) {
+  const theme = readTheme()
   const palette = themes[theme]
-  const themeStyle = {
-    '--theme-background': palette.background, '--theme-glow': palette.glow, '--theme-panel': palette.panel, '--theme-muted-panel': palette.mutedPanel, '--theme-border': palette.border, '--theme-text': palette.text, '--theme-soft-text': palette.softText, '--theme-eyebrow': palette.eyebrow, '--theme-action': palette.action, '--theme-action-text': palette.actionText,
-  } as CSSProperties
-
-  useEffect(() => {
-    const engine = new StockfishEngine()
-    engineRef.current = engine
-    return () => engine.terminate()
-  }, [])
-
-  useEffect(() => {
-    if (thinking || completedResult) return
-    saveActiveGame({ game, playerColor, difficulty, lastCapture })
-  }, [completedResult, difficulty, game, lastCapture, playerColor, thinking])
-
-  async function startBlackGame(freshGame: GameState) {
-    if (!engineRef.current) {
-      setNotice('Stockfish is still warming up. Try Black again in a moment.')
-      return
-    }
-    setThinking(true)
-    setNotice('Stockfish is opening as White…')
-    try {
-      const engineMove = await engineRef.current.bestMove({ fen: freshGame.fen, moves: [], ...skillLevels[difficulty] })
-      const opening = applyEngineMove(freshGame, engineMove, 'w')
-      if (!opening.accepted) throw new Error(`Stockfish returned an illegal opening move: ${engineMove}`)
-      setGame({ fen: opening.fen, history: opening.history, uciHistory: opening.uciHistory })
-      setNotice(`Stockfish played ${opening.san}. Your move as Black.`)
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : 'Stockfish could not start the game.')
-    } finally {
-      setThinking(false)
-    }
-  }
-
-  function chooseSide(color: 'w' | 'b') {
-    const freshGame = beginGame()
-    clearActiveGame()
-    setPlayerColor(color)
-    setReviewColor(color)
-    setGame(freshGame)
-    setThinking(false)
-    setSelectedSquare(null)
-    setCompletedResult(null)
-    setAnalysis(null)
-    setSelectedMoment(null)
-    savedGameRef.current = null
-    setAnalysing(false)
-    setLastCapture(null)
-    setNotice(color === 'w' ? 'Fresh board. You play White.' : 'Preparing Stockfish’s White opening…')
-    if (color === 'b') void startBlackGame(freshGame)
-  }
-
-  function chooseTheme(nextTheme: ThemeId) {
-    setTheme(nextTheme)
-    saveTheme(nextTheme)
-  }
-
-  function resetGame() {
-    chooseSide(playerColor)
-  }
-
-  function undoTurn() {
-    const previousGame = undoLastTurn(game, playerColor)
-    if (!previousGame) return
-    setGame(previousGame)
-    setSelectedSquare(null)
-    setLastCapture(null)
-    setNotice('Undid your last turn. Your move.')
-  }
-
-  function recordCapture(captured: keyof typeof piecePoints | null, actor: 'You' | 'Stockfish') {
-    if (!captured) return
-    setLastCapture(`${actor} captured a ${pieceLabels[captured]}, +${piecePoints[captured]}`)
-  }
-
-  function saveResult(result: Extract<ReturnType<typeof playMove>, { accepted: true }>) {
-    if (!result.result) return false
-    clearActiveGame()
-    const savedGame: SavedGame = {
-      id: crypto.randomUUID(),
-      playedAt: new Date().toISOString(),
-      result: result.result,
-      moves: result.history,
-      playerColor,
-      difficulty,
-    }
-    saveCompletedGame(savedGame)
-    savedGameRef.current = savedGame
-    setSavedGames(loadSavedGames())
-    setCompletedResult(result)
-    setNotice(`Game complete: ${result.result}. Saved to your local database.`)
-    return true
-  }
-
-  async function analyseGame() {
-    if (!engineRef.current || analysing) return
-    setAnalysing(true)
-    setNotice('Stockfish is reviewing your critical moments…')
-    try {
-      const candidates = []
-      for (let index = playerColor === 'w' ? 0 : 1; index < game.history.length; index += 2) {
-        const before = await engineRef.current.analyse({ fen: game.fen, moves: game.uciHistory.slice(0, index), skillLevel: 12, nodes: 1_500 })
-        const after = await engineRef.current.analyse({ fen: game.fen, moves: game.uciHistory.slice(0, index + 1), skillLevel: 12, nodes: 1_500 })
-        candidates.push({ moveNumber: Math.floor(index / 2) + 1, moveIndex: index, beforeFen: positionBeforeMove(game.fen, game.history, index), afterFen: positionBeforeMove(game.fen, game.history, index + 1), played: game.history[index], playedUci: game.uciHistory[index], replyUci: after.bestMove ?? undefined, best: before.bestMove ?? 'No continuation available', loss: Math.max(0, before.centipawns + after.centipawns) })
-      }
-      const moments = selectCriticalMoments(candidates)
-      setAnalysis(moments)
-      setSelectedMoment(moments.find((moment) => moment.rank === 1) ?? null)
-      setReviewColor(playerColor)
-      if (savedGameRef.current) {
-        const analysedGame = { ...savedGameRef.current, analysis: moments, analysisVersion: 1 as const }
-        saveCompletedGame(analysedGame)
-        savedGameRef.current = analysedGame
-        setSavedGames(loadSavedGames())
-      }
-      setNotice('Post-game review complete.')
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : 'Stockfish could not complete the review.')
-    } finally {
-      setAnalysing(false)
-    }
-  }
-
-  async function playTurn(sourceSquare: string, targetSquare: string): Promise<boolean> {
-    if (thinking || !engineRef.current) return false
-
-    const player = playMove(game, { from: sourceSquare, to: targetSquare, promotion: 'q' }, playerColor)
-    if (!player.accepted) {
-      setNotice('That move is not legal.')
-      return false
-    }
-
-    setSelectedSquare(null)
-    setGame({ fen: player.fen, history: player.history, uciHistory: player.uciHistory })
-    if (player.captured && player.captured !== 'k') recordCapture(player.captured, 'You')
-    if (saveResult(player)) return true
-
-    setThinking(true)
-    setNotice('Stockfish is calculating…')
-    try {
-      const settings = skillLevels[difficulty]
-      const engineMove = await engineRef.current.bestMove({
-        fen: game.fen,
-        moves: player.uciHistory,
-        ...settings,
-      })
-      const bot = applyEngineMove({ fen: player.fen, history: player.history, uciHistory: player.uciHistory }, engineMove, playerColor === 'w' ? 'b' : 'w')
-      if (!bot.accepted) throw new Error(`Stockfish returned an illegal move: ${engineMove}`)
-
-      setGame({ fen: bot.fen, history: bot.history, uciHistory: bot.uciHistory })
-      if (bot.captured && bot.captured !== 'k') recordCapture(bot.captured, 'Stockfish')
-      if (!saveResult(bot)) setNotice(`Stockfish played ${bot.san}. Your move.`)
-      return true
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : 'Stockfish could not complete its move.')
-      return false
-    } finally {
-      setThinking(false)
-    }
-  }
-
-  function handleSquareTap(square: string) {
-    if (tapGuardRef.current.consumeIfSuppressed(Date.now())) return
-    if (thinking) return
-    const isWhitePiece = isPlayersPiece(game, square, playerColor)
-    const { selected, move } = resolveTap(selectedSquare, square, isWhitePiece)
-    setSelectedSquare(selected)
-    if (!move) {
-      setNotice(selected ? `Selected ${selected}. Choose a destination.` : 'Tap one of your white pieces to select it.')
-      return
-    }
-    void playTurn(move.from, move.to)
-  }
-
-  return (
-    <main className="app-shell" data-theme={theme} style={themeStyle}>
-      <header className="topbar">
-        <div>
-          <p className="eyebrow">PERSONAL CHESS WORKSPACE</p>
-          <h1>Knightshift</h1>
-        </div>
-        <div className="game-actions">
-          <button className="undo-game" disabled={!canUndo} type="button" onClick={undoTurn}>Undo last turn</button>
-          <button className="new-game" type="button" onClick={resetGame}>New game</button>
-        </div>
-      </header>
-
-      {completedResult?.result && completedResult.termination && (() => {
-        const message = describeGameResult({ result: completedResult.result, termination: completedResult.termination }, playerColor)
-        return (
-          <section className="game-result" role="alert" aria-live="assertive">
-            <div>
-              <p className="section-label">GAME COMPLETE</p>
-              <h2>{message.title}</h2>
-              <p>{message.detail}</p>
-            </div>
-            <div className="game-actions">
-              <button className="undo-game" disabled={analysing} type="button" onClick={() => void analyseGame()}>{analysing ? 'Analyzing…' : 'Analyze game'}</button>
-              <button className="new-game" type="button" onClick={resetGame}>Play again</button>
-            </div>
-          </section>
-        )
-      })()}
-
-      {analysis && <section className="analysis-card" aria-live="polite">
-        <p className="section-label">POST-GAME REVIEW</p>
-        <h2>{analysis.length ? 'Your critical moments' : 'No major mistakes found'}</h2>
-        {analysis.length ? <>
-          <div className="moment-picker">
-            {analysis.map((moment) => <button className={selectedMoment === moment ? 'moment-button selected' : 'moment-button'} key={`${moment.moveNumber}-${moment.played}`} onClick={() => setSelectedMoment(moment)} type="button">Move {moment.moveNumber}: {moment.played} · #{moment.rank}{moment.rank === 1 ? ' biggest' : ''}</button>)}
-          </div>
-          {selectedMoment?.beforeFen && <div className="review-detail">
-            <div className="review-board"><Chessboard options={{ id: 'analysis-board', position: selectedMoment.beforeFen, boardOrientation: reviewColor === 'w' ? 'white' : 'black', showNotation: true, squareStyles: reviewSquareStyles(selectedMoment) }} /></div>
-            <div>
-              <p className="review-legend"><span className="legend-played">Red</span> your move <span className="legend-best">Green</span> better option</p>
-              <p className="section-label">MOVE {selectedMoment.moveNumber}</p>
-              <h3>Instead of {selectedMoment.played}, try {moveToSan(selectedMoment.beforeFen, selectedMoment.best)}</h3>
-              <p className="review-copy"><strong>{selectedMoment.label}.</strong> {selectedMoment.afterFen && selectedMoment.replyUci ? describeReply(selectedMoment.afterFen, selectedMoment.replyUci) ?? selectedMoment.explanation : selectedMoment.explanation}</p>
-            </div>
-          </div>}
-        </> : <p>Stockfish found no player moves with a meaningful evaluation drop at this review depth.</p>}
-      </section>}
-
-      <section className="insights-card">
-        <p className="section-label">IMPROVEMENT HISTORY</p>
-        <h2>Saved games and patterns</h2>
-        {savedGames.filter((savedGame) => savedGame.playerColor).length ? <><div className="insight-list">{insights.length ? insights.map((insight) => <p key={insight.kind}><strong>{insight.count}</strong> {insight.label.toLowerCase()}</p>) : <p>Analyse a completed game to start spotting patterns.</p>}</div><div className="saved-games">{savedGames.filter((savedGame) => savedGame.playerColor).map((savedGame) => <article key={savedGame.id}><strong>{new Date(savedGame.playedAt).toLocaleDateString()}</strong><span>You played {savedGame.playerColor === 'w' ? 'White' : 'Black'} · {savedGame.moves.length} plies · {savedGame.result}</span>{savedGame.analysis ? <button className="saved-review-button" onClick={() => { setAnalysis(savedGame.analysis ?? null); setSelectedMoment(savedGame.analysis?.find((moment) => moment.rank === 1) ?? null); setReviewColor(savedGame.playerColor ?? 'w') }} type="button">Open saved review · {savedGame.analysis.length} moments</button> : <span>Waiting for analysis</span>}</article>)}</div></> : <p className="review-copy">New analysed games will appear here. Older saved games remain archived and are excluded from patterns.</p>}
-      </section>
-
-      <section className="game-layout" aria-label="Play chess">
-        <div className="board-wrap">
-          <div className="engine-board" aria-label="Chess board">
-            <Chessboard options={{
-              id: 'knightshift-board',
-              position,
-              boardOrientation: playerColor === 'w' ? 'white' : 'black',
-              canDragPiece: ({ piece }) => piece.pieceType.startsWith(playerColor) && !thinking,
-              onSquareClick: ({ square }) => handleSquareTap(square),
-              onPieceDrop: ({ sourceSquare, targetSquare }) => {
-                if (!sourceSquare || !targetSquare) return false
-                tapGuardRef.current.recordDrop(Date.now())
-                void playTurn(sourceSquare, targetSquare)
-                return true
-              },
-              showNotation: true,
-              showAnimations: true,
-              animationDurationInMs: 180,
-              boardStyle: { borderRadius: '10px', boxShadow: `0 18px 45px ${palette.shadow}` },
-              darkSquareStyle: { backgroundColor: palette.boardDark },
-              lightSquareStyle: { backgroundColor: palette.boardLight },
-            }} />
-          </div>
-          <p className="board-status" role="status">{notice}</p>
-        </div>
-
-        <aside className="side-panel">
-          <section className="panel-card">
-            <p className="section-label">CURRENT GAME</p>
-            <h2>{thinking ? 'Stockfish is thinking' : 'Play against Stockfish'}</h2>
-            <label htmlFor="side">Play as</label>
-            <select disabled={thinking} id="side" value={playerColor} onChange={(event) => chooseSide(event.target.value as 'w' | 'b')}>
-              <option value="w">White</option>
-              <option value="b">Black</option>
-            </select>
-            <label htmlFor="difficulty">Engine difficulty</label>
-            <select disabled={thinking} id="difficulty" value={difficulty} onChange={(event) => setDifficulty(event.target.value)}>
-              <option>Casual</option>
-              <option>Steady</option>
-              <option>Sharp</option>
-            </select>
-            <label htmlFor="theme">Theme</label>
-            <select id="theme" value={theme} onChange={(event) => chooseTheme(event.target.value as ThemeId)}>
-              {themeOptions.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
-            </select>
-            <p className="material-balance">Material: <strong>{material > 0 ? `+${material}` : material === 0 ? 'Even' : material}</strong></p>
-            {lastCapture && <p className="capture-note" aria-live="polite">{lastCapture}</p>}
-            <div className="move-log" aria-label="Move history">
-              {game.history.length === 0 ? <p>Moves will appear here.</p> : game.history.map((move, index) => <span key={`${move}-${index}`}>{index % 2 === 0 ? `${Math.floor(index / 2) + 1}. ${move}` : move}</span>)}
-            </div>
-          </section>
-
-          <section className="panel-card muted-card">
-            <p className="section-label">ENGINE</p>
-            <h2>Stockfish 18 Lite</h2>
-            <p>Runs in your browser. Review completed games to build your local improvement history.</p>
-          </section>
-        </aside>
-      </section>
-    </main>
-  )
+  const style = { '--theme-background': palette.background, '--theme-glow': palette.glow, '--theme-panel': palette.panel, '--theme-muted-panel': palette.mutedPanel, '--theme-border': palette.border, '--theme-text': palette.text, '--theme-soft-text': palette.softText, '--theme-eyebrow': palette.eyebrow, '--theme-action': palette.action, '--theme-action-text': palette.actionText } as CSSProperties
+  return <main className="app-shell routed-shell" style={style}><header className="route-header"><Link to="/" className="brand">Knightshift</Link><nav>{[['/', 'Home'], ['/play', 'Play'], ['/history', 'History'], ['/settings', 'Settings']].map(([to, label]) => <NavLink key={to} to={to} end={to === '/'}>{label}</NavLink>)}</nav></header>{children}</main>
 }
 
-export default App
+function Home() {
+  const active = loadActiveGame(); const games = loadSavedGames(); const reviewed = games.filter(game => game.analysisVersion === 1 && game.analysis)
+  const latest = reviewed[0]
+  return <Shell><section className="route-card hero-card"><p className="section-label">PERSONAL CHESS WORKSPACE</p><h1>Play with purpose.</h1><p>{active ? 'Your game is saved and ready when you are.' : 'Play a game, review the moments that mattered, then notice what repeats.'}</p><Link className="new-game" to="/play">{active ? 'Resume game' : 'Play a game'}</Link></section><section className="route-card"><p className="section-label">PROGRESS</p><h2>{reviewed.length} analysed {reviewed.length === 1 ? 'game' : 'games'}</h2>{latest ? <Link to={`/review/${latest.id}`}>Review ready: your latest analysed game</Link> : <p className="review-copy">Finish and analyse a game to start your improvement history.</p>}</section></Shell>
+}
+
+function History() {
+ const games = loadSavedGames().filter(game => game.playerColor); const insights = summarizeInsights(games.filter(game => game.analysisVersion === 1 && game.analysis))
+ return <Shell><section className="route-card"><p className="section-label">IMPROVEMENT HISTORY</p><h1>History</h1>{insights.length ? <div className="insight-list">{insights.map(insight => <p key={insight.kind}><strong>{insight.count}</strong> {insight.label.toLowerCase()}</p>)}</div> : <p className="review-copy">Analyse completed games to start spotting patterns.</p>}<div className="saved-games">{games.length ? games.map(game => <article key={game.id}><strong>{new Date(game.playedAt).toLocaleDateString()}</strong><span>You played {game.playerColor === 'w' ? 'White' : 'Black'} · {game.moves.length} plies · {game.result}</span>{game.analysis ? <Link to={`/review/${game.id}`}>Open saved review · {game.analysis.length} moments</Link> : <span>Waiting for analysis</span>}</article>) : <p className="review-copy">New analysed games will appear here. Older saved games remain archived.</p>}</div></section></Shell>
+}
+
+function Settings() {
+ const [theme, setTheme] = useState<ThemeId>(readTheme); const [defaults, setDefaults] = useState<Defaults>(readDefaults)
+ function update(next: Partial<Defaults>) { const saved = { ...defaults, ...next }; setDefaults(saved); localStorage.setItem(defaultsKey, JSON.stringify(saved)) }
+ return <Shell><section className="route-card"><p className="section-label">DEFAULTS</p><h1>Settings</h1><label htmlFor="theme">Theme</label><select id="theme" value={theme} onChange={event => { const value = event.target.value as ThemeId; setTheme(value); saveTheme(value) }}>{themeOptions.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}</select><label htmlFor="default-side">Default side</label><select id="default-side" value={defaults.side} onChange={event => update({ side: event.target.value as 'w' | 'b' })}><option value="w">White</option><option value="b">Black</option></select><label htmlFor="default-difficulty">Default difficulty</label><select id="default-difficulty" value={defaults.difficulty} onChange={event => update({ difficulty: event.target.value as Defaults['difficulty'] })}><option>Casual</option><option>Steady</option><option>Sharp</option></select><p className="review-copy">These defaults apply to your next new game. Your completed games and active game remain local to this browser.</p></section></Shell>
+}
+
+function Review() {
+ const { gameId } = useParams(); const game = loadSavedGames().find(saved => saved.id === gameId); const [moment, setMoment] = useState<CriticalMoment | null>(() => game?.analysis?.find(item => item.rank === 1) ?? null)
+ if (!game?.analysis) return <Shell><section className="route-card"><h1>Review unavailable</h1><Link to="/history">Back to History</Link></section></Shell>
+ return <Shell><section className="route-card"><p className="section-label">SAVED REVIEW</p><h1>{new Date(game.playedAt).toLocaleDateString()}</h1><p className="review-copy">You played {game.playerColor === 'w' ? 'White' : 'Black'} · {game.result} · {game.difficulty}</p><div className="moment-picker">{game.analysis.map(item => <button className={moment === item ? 'moment-button selected' : 'moment-button'} key={`${item.moveIndex}-${item.rank}`} onClick={() => setMoment(item)} type="button">Move {item.moveNumber}: {item.played} · #{item.rank}{item.rank === 1 ? ' biggest' : ''}</button>)}</div>{moment?.beforeFen && <div className="review-detail"><div className="review-board"><Chessboard options={{ id: 'saved-review-board', position: moment.beforeFen, boardOrientation: game.playerColor === 'w' ? 'white' : 'black', showNotation: true }} /></div><div><p className="section-label">MOVE {moment.moveNumber}</p><h2>Instead of {moment.played}, try {moveToSan(moment.beforeFen, moment.best)}</h2><p className="review-copy">{moment.explanation}</p></div></div>}</section></Shell>
+}
+
+export default function App() { return <BrowserRouter><Routes><Route path="/" element={<Home />} /><Route path="/play" element={<PlayScreen />} /><Route path="/history" element={<History />} /><Route path="/settings" element={<Settings />} /><Route path="/review/:gameId" element={<Review />} /></Routes></BrowserRouter> }

@@ -12,20 +12,11 @@ describe('Knightshift home', () => {
     localStorage.clear()
   })
 
-  it('shows a Stockfish board and engine difficulty control', () => {
-    vi.stubGlobal('Worker', class {
-      addEventListener() {}
-      removeEventListener() {}
-      postMessage() {}
-      terminate() {}
-    })
+  it('shows a focused home dashboard and play entry point', () => {
     render(<App />)
 
-    expect(screen.getByRole('heading', { name: 'Knightshift' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'New game' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Undo last turn' })).toBeDisabled()
-    expect(screen.getByLabelText('Engine difficulty')).toBeInTheDocument()
-    expect(screen.getByLabelText('Chess board')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Play with purpose.' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Play a game' })).toHaveAttribute('href', '/play')
   })
 
   it('restores an active game checkpoint after a reload', () => {
@@ -40,9 +31,6 @@ describe('Knightshift home', () => {
 
     render(<App />)
 
-    expect(screen.getByText('1. e4')).toBeInTheDocument()
-    expect(screen.getByText('e5')).toBeInTheDocument()
-    expect(screen.getByLabelText('Engine difficulty')).toHaveValue('Sharp')
-    expect(screen.getByRole('button', { name: 'Undo last turn' })).toBeEnabled()
+    expect(screen.getByRole('link', { name: 'Resume game' })).toHaveAttribute('href', '/play')
   })
 })
