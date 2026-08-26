@@ -17,13 +17,17 @@ function Shell({ children }: { children: React.ReactNode }) {
   const theme = readTheme()
   const palette = themes[theme]
   const style = { '--theme-background': palette.background, '--theme-glow': palette.glow, '--theme-panel': palette.panel, '--theme-muted-panel': palette.mutedPanel, '--theme-border': palette.border, '--theme-text': palette.text, '--theme-soft-text': palette.softText, '--theme-eyebrow': palette.eyebrow, '--theme-action': palette.action, '--theme-action-text': palette.actionText } as CSSProperties
-  return <main className="app-shell routed-shell" style={style}><header className="route-header"><Link to="/" className="brand">Knightshift</Link><nav>{[['/', 'Home'], ['/play', 'Play'], ['/history', 'History'], ['/settings', 'Settings']].map(([to, label]) => <NavLink key={to} to={to} end={to === '/'}>{label}</NavLink>)}</nav></header>{children}</main>
+  return <main className="app-shell routed-shell" style={style}><header className="route-header"><Link to="/" className="brand">Knightshift</Link><nav>{[['/', 'Home'], ['/play', 'Play'], ['/settings', 'Settings']].map(([to, label]) => <NavLink key={to} to={to} end={to === '/'}>{label}</NavLink>)}</nav></header>{children}</main>
 }
 
 function Home() {
-  const active = loadActiveGame(); const games = loadSavedGames(); const reviewed = games.filter(game => game.analysisVersion === 1 && game.analysis)
-  const latest = reviewed[0]
-  return <Shell><section className="route-card hero-card"><p className="section-label">PERSONAL CHESS WORKSPACE</p><h1>Play with purpose.</h1><p>{active ? 'Your game is saved and ready when you are.' : 'Play a game, review the moments that mattered, then notice what repeats.'}</p><Link className="new-game" to="/play">{active ? 'Resume game' : 'Play a game'}</Link></section><section className="route-card"><p className="section-label">PROGRESS</p><h2>{reviewed.length} analysed {reviewed.length === 1 ? 'game' : 'games'}</h2>{latest ? <Link to={`/review/${latest.id}`}>Review ready: your latest analysed game</Link> : <p className="review-copy">Finish and analyse a game to start your improvement history.</p>}</section></Shell>
+  const active = loadActiveGame(); const games = loadSavedGames().filter(game => game.playerColor); const reviewed = games.filter(game => game.analysisVersion === 1 && game.analysis); const latest = reviewed[0]; const insight = summarizeInsights(reviewed)[0]; const recent = games.slice(0, 4)
+  return <Shell>
+    <section className="route-card hero-card"><p className="section-label">PERSONAL CHESS WORKSPACE</p><h1>Play with purpose.</h1><p>{active ? 'Your game is saved and ready when you are.' : 'Play a game, review the moments that mattered, then notice what repeats.'}</p><Link className="new-game" to="/play">{active ? 'Resume game' : 'Play a game'}</Link></section>
+    {latest && <section className="route-card"><p className="section-label">LATEST LESSON</p><h2>Review ready</h2><p className="review-copy">Your most recent analysed game is ready to revisit.</p><Link to={`/review/${latest.id}`}>Open saved review</Link></section>}
+    <section className="route-card"><p className="section-label">PATTERN TO NOTICE</p>{insight ? <p className="review-copy"><strong>{insight.count}</strong> {insight.label.toLowerCase()}</p> : <p className="review-copy">Finish and analyse a game to start noticing what repeats.</p>}</section>
+    <section className="route-card"><p className="section-label">RECENT GAMES</p><h2>{recent.length ? 'Your latest games' : 'No saved games yet'}</h2><div className="saved-games">{recent.length ? recent.map(game => <article key={game.id}><strong>{new Date(game.playedAt).toLocaleDateString()}</strong><span>You played {game.playerColor === 'w' ? 'White' : 'Black'} · {game.moves.length} plies · {game.result}</span>{game.analysis ? <Link to={`/review/${game.id}`}>Open saved review</Link> : <span>Waiting for analysis</span>}</article>) : <p className="review-copy">Completed games will appear here.</p>}</div><Link className="archive-link" to="/history">All saved games</Link></section>
+  </Shell>
 }
 
 function History() {
@@ -45,7 +49,7 @@ function reviewSquareStyles(moment: CriticalMoment): Record<string, CSSPropertie
 
 function Review() {
  const { gameId } = useParams(); const game = loadSavedGames().find(saved => saved.id === gameId); const [moment, setMoment] = useState<CriticalMoment | null>(() => game?.analysis?.find(item => item.rank === 1) ?? null)
- if (!game?.analysis) return <Shell><section className="route-card"><h1>Review unavailable</h1><Link to="/history">Back to History</Link></section></Shell>
+ if (!game?.analysis) return <Shell><section className="route-card"><h1>Review unavailable</h1><Link to="/">Back to Home</Link></section></Shell>
  return <Shell><section className="route-card"><p className="section-label">SAVED REVIEW</p><h1>{new Date(game.playedAt).toLocaleDateString()}</h1><p className="review-copy">You played {game.playerColor === 'w' ? 'White' : 'Black'} · {game.result} · {game.difficulty}</p><div className="moment-picker">{game.analysis.map(item => <button className={moment === item ? 'moment-button selected' : 'moment-button'} key={`${item.moveIndex}-${item.rank}`} onClick={() => setMoment(item)} type="button">Move {item.moveNumber}: {item.played} · {rankLabel(item.rank)}</button>)}</div>{moment?.beforeFen && <div className="review-detail"><div className="review-board"><Chessboard options={{ id: 'saved-review-board', position: moment.beforeFen, boardOrientation: game.playerColor === 'w' ? 'white' : 'black', showNotation: true, squareStyles: reviewSquareStyles(moment) }} /></div><div><p className="review-legend"><span className="legend-played">Red</span> your move <span className="legend-best">Green</span> better option</p><p className="section-label">MOVE {moment.moveNumber}</p><h2>Instead of {moment.played}, try {moveToSan(moment.beforeFen, moment.best)}</h2><p className="review-copy">{moment.afterFen && moment.replyUci ? describeReply(moment.afterFen, moment.replyUci) ?? moment.explanation : moment.explanation}</p></div></div>}</section></Shell>
 }
 

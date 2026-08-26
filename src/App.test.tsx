@@ -19,6 +19,13 @@ describe('Knightshift home', () => {
     expect(screen.getByRole('link', { name: 'Play a game' })).toHaveAttribute('href', '/play')
   })
 
+  it('makes the Home dashboard the entry to the saved-game archive', () => {
+    render(<App />)
+
+    expect(screen.getByRole('link', { name: 'All saved games' })).toHaveAttribute('href', '/history')
+    expect(screen.queryByRole('navigation')?.querySelector('a[href="/history"]')).toBeNull()
+  })
+
   it('restores an active game checkpoint after a reload', () => {
     localStorage.setItem('knightshift.active-game', JSON.stringify({
       version: 1,
