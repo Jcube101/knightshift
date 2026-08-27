@@ -44,6 +44,7 @@ Do not add accounts, cloud sync, PGN import, social features, or external chess-
 9. **Initial engine actions must be idempotent per Worker.** React effects can be mounted, cleaned up, and rerun. Tie a Black-default opening to its specific live `StockfishEngine` instance, not a Boolean or changing game state. Cancel writes from discarded Workers, and never request a second opening after the first move updates game state.
 10. **Exercise default-driven Black startup in a browser test.** A regression test must set `knightshift.defaults` to Black at Steady, wait for one opening move, and assert the status is `Your move as Black.`. A nonempty move log alone is insufficient.
 11. **Curate opening content, do not invent it.** Named opening and variation lines must replay legally through `chess.js` and be reconciled against a maintained opening dataset. Keep explanatory notes factual and concise. Do not present an unbounded opening list, engine evaluation, mastery scoring, or drills before a dedicated product slice.
+12. **Reset opening-study state at the correct boundary.** A variation change resets its board to move zero. Switching to a different opening must also reset both the selected variation and move position, even though React retains the Learn route component between parameter changes. Cover that navigation transition with a component regression test.
 
 ## Key files
 
