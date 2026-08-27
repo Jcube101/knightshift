@@ -12,6 +12,7 @@ import { classifyOpening } from '../lib/openingClassification'
 import { summarizeInsights } from '../lib/insights'
 import { describeGameResult } from '../lib/resultMessage'
 import { createTapGuard } from '../lib/tapGuard'
+import { latestMoveScrollLeft } from '../lib/moveLogScroll'
 import { readTheme, themes, type ThemeId } from '../lib/theme'
 import '../App.css'
 
@@ -52,6 +53,7 @@ function PlayScreen() {
   const engineRef = useRef<StockfishEngine | null>(null)
   const savedGameRef = useRef<SavedGame | null>(null)
   const tapGuardRef = useRef(createTapGuard(250))
+  const moveLogRef = useRef<HTMLDivElement | null>(null)
   const initialBlackEngineRef = useRef<StockfishEngine | null>(null)
   const navigate = useNavigate()
   const position = useMemo(() => positionFor(game), [game])
@@ -77,6 +79,11 @@ function PlayScreen() {
     if (thinking || completedResult) return
     saveActiveGame({ game, playerColor, difficulty, lastCapture })
   }, [completedResult, difficulty, game, lastCapture, playerColor, thinking])
+
+  useEffect(() => {
+    const moveLog = moveLogRef.current
+    if (moveLog) moveLog.scrollLeft = latestMoveScrollLeft(moveLog)
+  }, [game.history])
 
   const startBlackGame = useCallback(async (freshGame: GameState, isCancelled: () => boolean = () => false) => {
     if (!engineRef.current) {
@@ -281,7 +288,7 @@ function PlayScreen() {
         <div className="board-wrap">
           <div className="board-context">
             <p className="material-balance">Material <strong>{material > 0 ? `+${material}` : material === 0 ? 'Even' : material}</strong></p>
-            <div className="move-log" aria-label="Move history">
+            <div className="move-log" aria-label="Move history" ref={moveLogRef}>
               {game.history.length === 0 ? <span>Moves will appear here.</span> : game.history.map((move, index) => <span key={`${move}-${index}`}>{index % 2 === 0 ? `${Math.floor(index / 2) + 1}. ${move}` : move}</span>)}
             </div>
           </div>

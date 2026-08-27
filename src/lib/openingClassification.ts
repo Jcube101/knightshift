@@ -1,5 +1,11 @@
 import { Chess } from 'chess.js'
-import { openingDatabase } from './openingDatabase'
+import { openingDatabaseA } from './openingDatabaseA'
+import { openingDatabaseB } from './openingDatabaseB'
+import { openingDatabaseC } from './openingDatabaseC'
+import { openingDatabaseD } from './openingDatabaseD'
+import { openingDatabaseE } from './openingDatabaseE'
+
+const openingDatabase = [...openingDatabaseA, ...openingDatabaseB, ...openingDatabaseC, ...openingDatabaseD, ...openingDatabaseE]
 
 export type OpeningClassification =
   | { status: 'identified'; eco: string; opening: string; variation?: string; matchedPly: number; continuation: 'within-line' | 'unclassified' }
