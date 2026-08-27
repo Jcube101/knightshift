@@ -40,6 +40,8 @@ Do not add accounts, cloud sync, PGN import, social features, or external chess-
 6. **Keep browser persistence local and versioned.** Completed games live under `knightshift.completed-games`; the reload-safe active-game checkpoint lives under `knightshift.active-game`. Preserve legacy completed-game reads when evolving this schema.
 7. **Settings defaults configure only a fresh game.** Read validated `knightshift.defaults` values when no active checkpoint exists. Never overwrite an active game’s side or difficulty after it has begun.
 8. **Treat Stockfish startup as asynchronous UCI.** Wait for `uciok`, then `readyok`, before issuing `position` or `go`; start search timeouts only after readiness.
+9. **Initial engine actions must be idempotent per Worker.** React effects can be mounted, cleaned up, and rerun. Tie a Black-default opening to its specific live `StockfishEngine` instance, not a Boolean or changing game state. Cancel writes from discarded Workers, and never request a second opening after the first move updates game state.
+10. **Exercise default-driven Black startup in a browser test.** A regression test must set `knightshift.defaults` to Black at Steady, wait for one opening move, and assert the status is `Your move as Black.`. A nonempty move log alone is insufficient.
 
 ## Key files
 
