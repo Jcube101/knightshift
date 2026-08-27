@@ -17,6 +17,19 @@ Knightshift is a private, local-first chess improvement workspace. Play Stockfis
 - Completed games and active games saved in browser `localStorage`
 - No account, backend, cloud engine, or game import required
 
+## Design and experience
+
+Knightshift uses the **Quiet Study × Training Lab** visual system: a dark, board-first private workspace with editorial typography and quiet, evidence-backed feedback. The fixed Quiet Study palette is product identity, not a selectable theme.
+
+The information architecture is deliberately small:
+
+- **Home** is the reflective study page: one next action, a latest lesson when available, one restrained pattern signal, and recent games.
+- **Play** keeps the board dominant, with material and a touch-scrollable move strip above it. Side and difficulty controls remain compact.
+- **Settings** holds durable new-game defaults.
+- **Home, Play, and Settings** are the only primary navigation destinations. The full saved-game archive remains available at `/history` through **All saved games**.
+
+The visible top row is intentional on mobile and desktop. A hamburger drawer would add friction and imply complexity the current three-workspace app does not have. Read [`DESIGN.md`](./DESIGN.md) for the complete visual system, interaction rules, and decision rationale.
+
 ## Stack
 
 - React 19, TypeScript, Vite

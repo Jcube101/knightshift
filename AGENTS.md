@@ -20,6 +20,16 @@ Planned, not yet built:
 
 Do not add accounts, cloud sync, PGN import, social features, or external chess-platform integration unless explicitly requested.
 
+## Design specification
+
+`DESIGN.md` is the live visual and experience specification for Knightshift. Read it before changing UI, layout, route hierarchy, navigation, typography, colour, component treatment, or mobile interaction hierarchy.
+
+- Treat its product-specific decisions as authoritative over generic frontend conventions.
+- If a proposed interface or behavior conflicts with the spec, flag the conflict rather than silently choosing a side.
+- For an approved visual or information-architecture decision, update `DESIGN.md` before implementation, including the rationale in **Decisions & Reasoning**.
+- Run `npx -y @google/design.md lint DESIGN.md --format json` after editing it, and perform rendered mobile and desktop visual QA for visible changes.
+- Do not turn Home into a performance dashboard, add a hamburger drawer at the current scope, or expand the primary navigation beyond Home, Play, and Settings without an explicit product decision.
+
 ## Core technical rules
 
 1. **`chess.js` is the rules authority.** Validate every user and engine move through it.
