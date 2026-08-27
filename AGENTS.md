@@ -9,14 +9,13 @@ Knightshift is a private, local-first chess improvement tool, not a Chess.com cl
 Current scope:
 
 - In-browser games against Stockfish
-- White and Black play
+- White and Black play, with Settings defaults applied only when starting a new game
 - Browser-local active-game and completed-game storage
+- Deliberate post-game analysis, saved review moments, and proof-backed recurring insights
 - Mobile-first board interaction
 
 Planned, not yet built:
 
-- Post-game analysis and mistake explanations
-- Recurring-mistake insights
 - Opening explorer and repertoire training
 
 Do not add accounts, cloud sync, PGN import, social features, or external chess-platform integration unless explicitly requested.
@@ -29,12 +28,16 @@ Do not add accounts, cloud sync, PGN import, social features, or external chess-
 4. **The canonical game position owns piece identity.** Do not trust `react-chessboard` callback piece data during animations or touch transitions.
 5. **Mobile interactions are release-critical.** Preserve both tap-to-move and drag-to-move. A successful drag must not leave its destination selected by a trailing tap.
 6. **Keep browser persistence local and versioned.** Completed games live under `knightshift.completed-games`; the reload-safe active-game checkpoint lives under `knightshift.active-game`. Preserve legacy completed-game reads when evolving this schema.
+7. **Settings defaults configure only a fresh game.** Read validated `knightshift.defaults` values when no active checkpoint exists. Never overwrite an active game’s side or difficulty after it has begun.
+8. **Treat Stockfish startup as asynchronous UCI.** Wait for `uciok`, then `readyok`, before issuing `position` or `go`; start search timeouts only after readiness.
 
 ## Key files
 
 | Path | Purpose |
 | --- | --- |
-| `src/App.tsx` | Game UI, player side, input coordination, engine turn orchestration |
+| `src/App.tsx` | Routed application shell, Home study dashboard, Settings UI |
+| `src/screens/PlayScreen.tsx` | Game UI, player side, input coordination, engine turn orchestration |
+| `src/lib/defaults.ts` | Validated Settings defaults for fresh games |
 | `src/lib/game.ts` | `chess.js` state, legal move application, game outcome |
 | `src/lib/engine.ts` | Stockfish Worker wrapper and UCI best-move parsing |
 | `src/lib/tapMove.ts` | Tap-selection state transition |

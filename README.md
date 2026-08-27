@@ -7,9 +7,12 @@ Knightshift is a private, local-first chess improvement workspace. Play Stockfis
 ## What works today
 
 - Play complete games against Stockfish 18 Lite in the browser
-- Choose to play White or Black
+- Choose a default side and difficulty in Settings for each new game
+- Choose White or Black for an individual new game
 - When playing Black, Stockfish makes the opening White move before input is enabled
 - Three real engine levels: Casual, Steady, and Sharp
+- Deliberate post-game Stockfish analysis with 2–3 saved critical moments
+- Saved reviews and proof-backed recurring-pattern signals on Home
 - Mobile tap-to-move and desktop/mobile drag-to-move
 - Completed games and active games saved in browser `localStorage`
 - No account, backend, cloud engine, or game import required
@@ -64,7 +67,7 @@ All player and engine moves are validated through `chess.js`. Do not invent engi
 
 ### Engine
 
-`src/lib/engine.ts` wraps Stockfish in a browser Worker. The build script stages the Stockfish WASM assets from the npm package into `public/stockfish/`, then Vite copies them to `dist/stockfish/`.
+`src/lib/engine.ts` wraps Stockfish in a browser Worker. It completes the UCI `uci` → `uciok` → `isready` → `readyok` handshake before searching, which keeps Worker startup reliable on slower mobile browsers. The build script stages the Stockfish WASM assets from the npm package into `public/stockfish/`, then Vite copies them to `dist/stockfish/`.
 
 Difficulty maps to actual engine settings:
 
@@ -85,11 +88,11 @@ Ownership always comes from the canonical `chess.js` position, not a transient c
 
 ### Storage
 
-Knightshift uses versioned browser-local storage. Completed games persist under `knightshift.completed-games`, while the current active-game checkpoint is stored under `knightshift.active-game`. The completed-game reader supports the legacy array format and writes version 1 envelopes going forward.
+Knightshift uses versioned browser-local storage. Completed games persist under `knightshift.completed-games`, while the current active-game checkpoint is stored under `knightshift.active-game`. Settings defaults persist separately under `knightshift.defaults`. The completed-game reader supports the legacy array format and writes version 1 envelopes going forward.
 
-An active checkpoint captures the position, SAN/UCI history, player side, difficulty, and latest capture cue. It is restored after a browser reload. The active checkpoint is cleared only when the player deliberately starts a new game or completes one; completed games remain saved.
+An active checkpoint captures the position, SAN/UCI history, player side, difficulty, and latest capture cue. It is restored after a browser reload. Settings defaults are applied only when no active checkpoint exists and a new game begins. Changing Settings never rewrites an active or completed game. The active checkpoint is cleared only when the player deliberately starts a new game or completes one; completed games remain saved.
 
-Clearing site storage clears saved games and the active checkpoint. There is no sync or account system yet.
+Clearing site storage clears saved games, the active checkpoint, and Settings defaults. There is no sync or account system yet.
 
 ## Deployment
 
@@ -104,9 +107,9 @@ Do not deploy source files or a dirty working tree. Verify the live Vite bundle 
 
 ## Roadmap
 
-1. Lightweight post-game Stockfish analysis and concise mistake explanations
-2. Saved-game views and recurring-mistake insights
-3. Opening explorer and repertoire saving
+1. Opening explorer and repertoire saving
+2. Repertoire drilling, once opening content is real enough to deserve a dedicated workspace
+3. Deeper board-grounded review explanations, only where the engine evidence supports them
 
 ## Licensing
 
