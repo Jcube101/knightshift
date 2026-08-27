@@ -27,7 +27,7 @@ The information architecture is deliberately small:
 - **Home** is the reflective study page: one next action, a latest lesson when available, one restrained pattern signal, and recent games.
 - **Play** keeps the board dominant, with material and a touch-scrollable move strip above it. Side and difficulty controls remain compact.
 - **Settings** holds durable new-game defaults.
-- **Learn** is the opening-study workspace: a broad survey of opening families and named variations, with a board-backed move explorer.
+- **Learn** is the opening-study workspace: a broad survey of opening families and named variations, with a board-backed move explorer. Its White/Black study selector is an accessible Quiet Study segmented control, with an explicit active state rather than browser-default buttons.
 - **Home, Play, Learn, and Settings** are the primary navigation destinations. The full saved-game archive remains available at `/history` through **All saved games**.
 
 The visible top row is intentional on mobile and desktop. Four stable workspaces remain comfortable to scan at phone width; a hamburger drawer would add friction and imply complexity the current app does not have. Read [`DESIGN.md`](./DESIGN.md) for the complete visual system, interaction rules, and decision rationale.

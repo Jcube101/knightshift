@@ -29,7 +29,7 @@ Do not add accounts, cloud sync, PGN import, social features, or external chess-
 - If a proposed interface or behavior conflicts with the spec, flag the conflict rather than silently choosing a side.
 - For an approved visual or information-architecture decision, update `DESIGN.md` before implementation, including the rationale in **Decisions & Reasoning**.
 - Run `npx -y @google/design.md lint DESIGN.md --format json` after editing it, and perform rendered mobile and desktop visual QA for visible changes.
-- Do not turn Home into a performance dashboard, add a hamburger drawer at the current scope, or expand the primary navigation beyond Home, Play, and Settings without an explicit product decision.
+- Do not turn Home into a performance dashboard, add a hamburger drawer at the current scope, or expand the primary navigation beyond Home, Play, Learn, and Settings without an explicit product decision.
 
 ## Core technical rules
 
@@ -45,6 +45,7 @@ Do not add accounts, cloud sync, PGN import, social features, or external chess-
 10. **Exercise default-driven Black startup in a browser test.** A regression test must set `knightshift.defaults` to Black at Steady, wait for one opening move, and assert the status is `Your move as Black.`. A nonempty move log alone is insufficient.
 11. **Curate opening content, do not invent it.** Named opening and variation lines must replay legally through `chess.js` and be reconciled against a maintained opening dataset. Keep explanatory notes factual and concise. Do not present an unbounded opening list, engine evaluation, mastery scoring, or drills before a dedicated product slice.
 12. **Reset opening-study state at the correct boundary.** A variation change resets its board to move zero. Switching to a different opening must also reset both the selected variation and move position, even though React retains the Learn route component between parameter changes. Cover that navigation transition with a component regression test.
+13. **Study-side selection is a Quiet Study control, not browser chrome.** Use an accessible pressed-state segmented control. The active choice must have a non-color-only programmatic state and moss treatment; inactive choices use the raised surface, divider border, parchment text, and the standard 6px radius with at least 42px touch height. Verify it at mobile and desktop widths.
 
 ## Key files
 

@@ -176,6 +176,7 @@ Borders are fine, restrained, and structural. Avoid oversized rounded containers
 - **Board:** Retain standard chess notation and accessible square contrast. Treat it as a physical study object with a contained shadow, not as an animated game arena.
 - **Review legend and overlays:** Red marks both origin and destination of the played move; green marks both origin and destination of the recommendation. When squares overlap, preserve the recommended move’s legibility with a secondary outline or layered treatment. Explanatory copy names only evidence recorded from the position.
 - **Settings fields:** Plain labelled controls with persistent labels, short helper copy, visible keyboard focus, and no visual competition with the current default values.
+- **Study-side selector:** A compact two-option segmented control for Learn as White and Learn as Black. Inactive choices use the raised study surface, divider border, and parchment text; the selected choice uses moss with study-green text. Both options keep the 6px control radius, a 42px minimum touch height, and visible focus. Never allow browser-default button chrome, black outset borders, square corners, or an ambiguous selected state.
 
 ## Do's and Don'ts
 
