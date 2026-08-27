@@ -1,9 +1,10 @@
 import { Chess } from 'chess.js'
 import { Chessboard } from 'react-chessboard'
 import { Link, useNavigate } from 'react-router-dom'
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { applyEngineMove, beginGame, canUndoLastTurn, isPlayersPiece, materialBalance, playMove, undoLastTurn, type GameState } from '../lib/game'
 import { StockfishEngine } from '../lib/engine'
+import { readDefaults } from '../lib/defaults'
 import { clearActiveGame, loadActiveGame, loadSavedGames, saveActiveGame, saveCompletedGame, type SavedGame } from '../lib/storage'
 import { resolveTap } from '../lib/tapMove'
 import { positionBeforeMove, selectCriticalMoments, type CriticalMoment } from '../lib/analysis'
@@ -32,10 +33,11 @@ function positionFor(game: GameState): string {
 
 function PlayScreen() {
   const [restoredActiveGame] = useState(loadActiveGame)
+  const [newGameDefaults] = useState(readDefaults)
   const [game, setGame] = useState<GameState>(() => restoredActiveGame?.game ?? beginGame())
-  const [difficulty, setDifficulty] = useState(() => restoredActiveGame?.difficulty ?? 'Steady')
-  const [playerColor, setPlayerColor] = useState<'w' | 'b'>(() => restoredActiveGame?.playerColor ?? 'w')
-  const [notice, setNotice] = useState(() => restoredActiveGame ? 'Restored your active game. Your move.' : 'Stockfish is warming up. You play White.')
+  const [difficulty, setDifficulty] = useState(() => restoredActiveGame?.difficulty ?? newGameDefaults.difficulty)
+  const [playerColor, setPlayerColor] = useState<'w' | 'b'>(() => restoredActiveGame?.playerColor ?? newGameDefaults.side)
+  const [notice, setNotice] = useState(() => restoredActiveGame ? 'Restored your active game. Your move.' : newGameDefaults.side === 'b' ? 'Preparing Stockfish’s White opening…' : 'Stockfish is warming up. You play White.')
   const [thinking, setThinking] = useState(false)
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null)
   const [completedResult, setCompletedResult] = useState<Extract<ReturnType<typeof playMove>, { accepted: true }> | null>(null)
@@ -49,6 +51,7 @@ function PlayScreen() {
   const engineRef = useRef<StockfishEngine | null>(null)
   const savedGameRef = useRef<SavedGame | null>(null)
   const tapGuardRef = useRef(createTapGuard(250))
+  const initialBlackStartedRef = useRef(false)
   const navigate = useNavigate()
   const position = useMemo(() => positionFor(game), [game])
   const material = useMemo(() => materialBalance(game, playerColor), [game, playerColor])
@@ -74,7 +77,7 @@ function PlayScreen() {
     saveActiveGame({ game, playerColor, difficulty, lastCapture })
   }, [completedResult, difficulty, game, lastCapture, playerColor, thinking])
 
-  async function startBlackGame(freshGame: GameState) {
+  const startBlackGame = useCallback(async (freshGame: GameState, isCancelled: () => boolean = () => false) => {
     if (!engineRef.current) {
       setNotice('Stockfish is still warming up. Try Black again in a moment.')
       return
@@ -83,16 +86,28 @@ function PlayScreen() {
     setNotice('Stockfish is opening as White…')
     try {
       const engineMove = await engineRef.current.bestMove({ fen: freshGame.fen, moves: [], ...skillLevels[difficulty] })
+      if (isCancelled()) return
       const opening = applyEngineMove(freshGame, engineMove, 'w')
       if (!opening.accepted) throw new Error(`Stockfish returned an illegal opening move: ${engineMove}`)
       setGame({ fen: opening.fen, history: opening.history, uciHistory: opening.uciHistory })
       setNotice(`Stockfish played ${opening.san}. Your move as Black.`)
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : 'Stockfish could not start the game.')
+      if (!isCancelled()) setNotice(error instanceof Error ? error.message : 'Stockfish could not start the game.')
     } finally {
-      setThinking(false)
+      if (!isCancelled()) setThinking(false)
     }
-  }
+  }, [difficulty])
+
+  useEffect(() => {
+    if (initialBlackStartedRef.current || restoredActiveGame || playerColor !== 'b') return
+    initialBlackStartedRef.current = true
+    let cancelled = false
+    void startBlackGame(game, () => cancelled)
+    return () => {
+      cancelled = true
+      initialBlackStartedRef.current = false
+    }
+  }, [game, playerColor, restoredActiveGame, startBlackGame])
 
   function chooseSide(color: 'w' | 'b') {
     const freshGame = beginGame()

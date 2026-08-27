@@ -15,3 +15,11 @@ test('a mobile tap sequence plays a legal pawn move', async ({ page }) => {
 
   await expect(page.locator('.move-log')).toContainText('d4')
 })
+
+test('starts a new game from saved Settings defaults', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('knightshift.defaults', JSON.stringify({ side: 'b', difficulty: 'Sharp' })))
+  await page.goto('/play')
+
+  await expect(page.getByRole('button', { name: 'Black' })).toHaveClass(/selected/)
+  await expect(page.getByRole('slider', { name: 'Engine difficulty' })).toHaveValue('2')
+})

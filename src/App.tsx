@@ -1,6 +1,7 @@
 import { Chessboard } from 'react-chessboard'
 import { BrowserRouter, Link, NavLink, Route, Routes, useParams } from 'react-router-dom'
 import { useState, type CSSProperties } from 'react'
+import { readDefaults, saveDefaults, type Defaults } from './lib/defaults'
 import { loadActiveGame, loadSavedGames } from './lib/storage'
 import { summarizeInsights } from './lib/insights'
 import { describeReply, moveToSan, type CriticalMoment } from './lib/analysis'
@@ -8,10 +9,6 @@ import { rankLabel } from './lib/review'
 import { readTheme, themes } from './lib/theme'
 import PlayScreen from './screens/PlayScreen'
 import './App.css'
-
-const defaultsKey = 'knightshift.defaults'
-type Defaults = { side: 'w' | 'b'; difficulty: 'Casual' | 'Steady' | 'Sharp' }
-function readDefaults(): Defaults { try { return { side: 'w', difficulty: 'Steady', ...JSON.parse(localStorage.getItem(defaultsKey) ?? '{}') } } catch { return { side: 'w', difficulty: 'Steady' } } }
 
 function Shell({ children }: { children: React.ReactNode }) {
   const theme = readTheme()
@@ -37,7 +34,7 @@ function History() {
 
 function Settings() {
  const [defaults, setDefaults] = useState<Defaults>(readDefaults)
- function update(next: Partial<Defaults>) { const saved = { ...defaults, ...next }; setDefaults(saved); localStorage.setItem(defaultsKey, JSON.stringify(saved)) }
+ function update(next: Partial<Defaults>) { const saved = { ...defaults, ...next }; setDefaults(saved); saveDefaults(saved) }
  return <Shell><section className="route-card"><p className="section-label">DEFAULTS</p><h1>Settings</h1><p className="review-copy">Quiet Study is Knightshift’s fixed visual system.</p><label htmlFor="default-side">Default side</label><select id="default-side" value={defaults.side} onChange={event => update({ side: event.target.value as 'w' | 'b' })}><option value="w">White</option><option value="b">Black</option></select><label htmlFor="default-difficulty">Default difficulty</label><select id="default-difficulty" value={defaults.difficulty} onChange={event => update({ difficulty: event.target.value as Defaults['difficulty'] })}><option>Casual</option><option>Steady</option><option>Sharp</option></select><p className="review-copy">These defaults apply to your next new game. Your completed games and active game remain local to this browser.</p></section></Shell>
 }
 
