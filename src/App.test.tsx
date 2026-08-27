@@ -43,6 +43,13 @@ describe('Knightshift home', () => {
     expect(screen.getByText('Unclassified continuation after 2 moves')).toBeInTheDocument()
   })
 
+  it('shows review progress instead of waiting when a saved review can resume', () => {
+    localStorage.setItem('knightshift.completed-games', JSON.stringify({ version: 1, games: [{ id: 'resume', playedAt: '2026-08-27T00:00:00.000Z', result: '1-0', moves: ['e4', 'e5'], playerColor: 'w' }] }))
+    localStorage.setItem('knightshift.review-jobs', JSON.stringify([{ gameId: 'resume', totalPlayerMoves: 12, nextMoveIndex: 6, candidates: [{ moveNumber: 1, played: 'e4', best: 'e5', loss: 90 }], status: 'paused' }]))
+    render(<App />)
+    expect(screen.getByText('Review in progress · 1 of 12 moves saved')).toBeInTheDocument()
+  })
+
   it('restores an active game checkpoint after a reload', () => {
     localStorage.setItem('knightshift.active-game', JSON.stringify({
       version: 1,

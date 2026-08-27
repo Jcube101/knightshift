@@ -1,6 +1,6 @@
 import { Chess } from 'chess.js'
 import { Chessboard } from 'react-chessboard'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { applyEngineMove, beginGame, canUndoLastTurn, isPlayersPiece, materialBalance, playMove, undoLastTurn, type GameState } from '../lib/game'
 import { StockfishEngine } from '../lib/engine'
@@ -13,6 +13,7 @@ import { summarizeInsights } from '../lib/insights'
 import { describeGameResult } from '../lib/resultMessage'
 import { createTapGuard } from '../lib/tapGuard'
 import { latestMoveScrollLeft } from '../lib/moveLogScroll'
+import { loadReviewJob, saveReviewJob } from '../lib/reviewJob'
 import { readTheme, themes, type ThemeId } from '../lib/theme'
 import '../App.css'
 
@@ -33,12 +34,24 @@ function positionFor(game: GameState): string {
   return chess.fen()
 }
 
+function gameForReview(savedGame: SavedGame): GameState {
+  const chess = new Chess()
+  const uciHistory = savedGame.moves.map(move => {
+    const played = chess.move(move)
+    return `${played.from}${played.to}${played.promotion ?? ''}`
+  })
+  return { fen: new Chess().fen(), history: savedGame.moves, uciHistory }
+}
+
 function PlayScreen() {
+  const [searchParams] = useSearchParams()
+  const reviewGameId = searchParams.get('review')
+  const reviewGame = reviewGameId ? loadSavedGames().find(saved => saved.id === reviewGameId) ?? null : null
   const [restoredActiveGame] = useState(loadActiveGame)
   const [newGameDefaults] = useState(readDefaults)
-  const [game, setGame] = useState<GameState>(() => restoredActiveGame?.game ?? beginGame())
-  const [difficulty, setDifficulty] = useState(() => restoredActiveGame?.difficulty ?? newGameDefaults.difficulty)
-  const [playerColor, setPlayerColor] = useState<'w' | 'b'>(() => restoredActiveGame?.playerColor ?? newGameDefaults.side)
+  const [game, setGame] = useState<GameState>(() => reviewGame ? gameForReview(reviewGame) : restoredActiveGame?.game ?? beginGame())
+  const [difficulty, setDifficulty] = useState(() => reviewGame?.difficulty ?? restoredActiveGame?.difficulty ?? newGameDefaults.difficulty)
+  const [playerColor, setPlayerColor] = useState<'w' | 'b'>(() => reviewGame?.playerColor ?? restoredActiveGame?.playerColor ?? newGameDefaults.side)
   const [notice, setNotice] = useState(() => restoredActiveGame ? 'Restored your active game. Your move.' : newGameDefaults.side === 'b' ? 'Preparing Stockfish’s White opening…' : 'Stockfish is warming up. You play White.')
   const [thinking, setThinking] = useState(false)
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null)
@@ -51,7 +64,7 @@ function PlayScreen() {
   const [reviewColor, setReviewColor] = useState<'w' | 'b'>(() => restoredActiveGame?.playerColor ?? 'w')
   const [savedGames, setSavedGames] = useState<SavedGame[]>(loadSavedGames)
   const engineRef = useRef<StockfishEngine | null>(null)
-  const savedGameRef = useRef<SavedGame | null>(null)
+  const savedGameRef = useRef<SavedGame | null>(reviewGame)
   const tapGuardRef = useRef(createTapGuard(250))
   const moveLogRef = useRef<HTMLDivElement | null>(null)
   const initialBlackEngineRef = useRef<StockfishEngine | null>(null)
@@ -174,33 +187,26 @@ function PlayScreen() {
   }
 
   async function analyseGame() {
-    if (!engineRef.current || analysing) return
+    const savedGame = savedGameRef.current
+    if (!engineRef.current || analysing || !savedGame) return
     setAnalysing(true)
-    setNotice('Stockfish is reviewing your critical moments…')
+    const existing = loadReviewJob(savedGame.id)
+    const start = existing?.nextMoveIndex ?? (playerColor === 'w' ? 0 : 1)
+    const candidates = existing?.candidates ?? []
+    const totalPlayerMoves = Math.ceil((game.history.length - (playerColor === 'w' ? 0 : 1)) / 2)
+    setNotice(`Reviewing your moves, ${Math.floor(candidates.length / 1) + 1} of ${totalPlayerMoves}`)
     try {
-      const candidates = []
-      for (let index = playerColor === 'w' ? 0 : 1; index < game.history.length; index += 2) {
+      for (let index = start; index < game.history.length; index += 2) {
         const before = await engineRef.current.analyse({ fen: game.fen, moves: game.uciHistory.slice(0, index), skillLevel: 12, nodes: 1_500 })
         const after = await engineRef.current.analyse({ fen: game.fen, moves: game.uciHistory.slice(0, index + 1), skillLevel: 12, nodes: 1_500 })
         candidates.push({ moveNumber: Math.floor(index / 2) + 1, moveIndex: index, beforeFen: positionBeforeMove(game.fen, game.history, index), afterFen: positionBeforeMove(game.fen, game.history, index + 1), played: game.history[index], playedUci: game.uciHistory[index], replyUci: after.bestMove ?? undefined, best: before.bestMove ?? 'No continuation available', loss: Math.max(0, before.centipawns + after.centipawns) })
+        saveReviewJob({ gameId: savedGame.id, totalPlayerMoves, nextMoveIndex: index + 2, candidates, status: 'paused' })
+        setNotice(`Reviewing your moves, ${candidates.length} of ${totalPlayerMoves}`)
       }
       const moments = selectCriticalMoments(candidates)
-      setAnalysis(moments)
-      setSelectedMoment(moments.find((moment) => moment.rank === 1) ?? null)
-      setReviewColor(playerColor)
-      if (savedGameRef.current) {
-        const analysedGame = { ...savedGameRef.current, analysis: moments, analysisVersion: 1 as const }
-        saveCompletedGame(analysedGame)
-        savedGameRef.current = analysedGame
-        setSavedGames(loadSavedGames())
-        navigate('/')
-      }
-      setNotice('Post-game review complete.')
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : 'Stockfish could not complete the review.')
-    } finally {
-      setAnalysing(false)
-    }
+      const analysedGame = { ...savedGame, analysis: moments, analysisVersion: 1 as const }
+      saveCompletedGame(analysedGame); savedGameRef.current = analysedGame; saveReviewJob({ gameId: savedGame.id, totalPlayerMoves, nextMoveIndex: game.history.length, candidates, status: 'complete' }); setSavedGames(loadSavedGames()); navigate('/')
+    } catch (error) { saveReviewJob({ gameId: savedGame.id, totalPlayerMoves, nextMoveIndex: start, candidates, status: 'failed' }); setNotice(error instanceof Error ? `${error.message} Return to resume review.` : 'Review paused. Return to resume review.') } finally { setAnalysing(false) }
   }
 
   async function playTurn(sourceSquare: string, targetSquare: string): Promise<boolean> {
@@ -267,6 +273,7 @@ function PlayScreen() {
         </div>
       </header>
 
+      {reviewGame && !reviewGame.analysis && <section className="game-result"><div><p className="section-label">POST-GAME REVIEW</p><h2>Resume your saved review</h2><p>{loadReviewJob(reviewGame.id)?.candidates.length ?? 0} of {loadReviewJob(reviewGame.id)?.totalPlayerMoves ?? 0} moves saved.</p></div><button className="new-game" disabled={analysing} type="button" onClick={() => void analyseGame()}>{analysing ? 'Analyzing…' : 'Resume review'}</button></section>}
       {completedResult?.result && completedResult.termination && (() => {
         const message = describeGameResult({ result: completedResult.result, termination: completedResult.termination }, playerColor)
         return (
