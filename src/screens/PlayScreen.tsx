@@ -51,7 +51,7 @@ function PlayScreen() {
   const engineRef = useRef<StockfishEngine | null>(null)
   const savedGameRef = useRef<SavedGame | null>(null)
   const tapGuardRef = useRef(createTapGuard(250))
-  const initialBlackStartedRef = useRef(false)
+  const initialBlackEngineRef = useRef<StockfishEngine | null>(null)
   const navigate = useNavigate()
   const position = useMemo(() => positionFor(game), [game])
   const material = useMemo(() => materialBalance(game, playerColor), [game, playerColor])
@@ -99,13 +99,13 @@ function PlayScreen() {
   }, [difficulty])
 
   useEffect(() => {
-    if (initialBlackStartedRef.current || restoredActiveGame || playerColor !== 'b') return
-    initialBlackStartedRef.current = true
+    const engine = engineRef.current
+    if (!engine || restoredActiveGame || playerColor !== 'b' || initialBlackEngineRef.current === engine) return
+    initialBlackEngineRef.current = engine
     let cancelled = false
     void startBlackGame(game, () => cancelled)
     return () => {
       cancelled = true
-      initialBlackStartedRef.current = false
     }
   }, [game, playerColor, restoredActiveGame, startBlackGame])
 

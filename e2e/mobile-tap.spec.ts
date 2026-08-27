@@ -23,3 +23,11 @@ test('starts a new game from saved Settings defaults', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Black' })).toHaveClass(/selected/)
   await expect(page.getByRole('slider', { name: 'Engine difficulty' })).toHaveValue('2')
 })
+
+test('starts exactly one Stockfish opening for a Black default', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('knightshift.defaults', JSON.stringify({ side: 'b', difficulty: 'Steady' })))
+  await page.goto('/play')
+
+  await expect(page.locator('.move-log')).toContainText('1.', { timeout: 30_000 })
+  await expect(page.locator('.board-status')).toContainText('Your move as Black.')
+})
