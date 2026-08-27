@@ -23,52 +23,74 @@ type EngineOptions = {
 
 export class StockfishEngine {
   private readonly worker: Worker
+  private readonly ready: Promise<void>
 
   constructor(worker = new Worker('/stockfish/stockfish-18-lite-single.js')) {
     this.worker = worker
+    this.ready = new Promise((resolve, reject) => {
+      let waitingForReady = false
+      const timeout = globalThis.setTimeout(() => {
+        this.worker.removeEventListener('message', handleMessage)
+        reject(new Error('Stockfish did not finish starting.'))
+      }, 30_000)
+      const handleMessage = (event: EngineMessage) => {
+        if (!waitingForReady && event.data.trim() === 'uciok') {
+          waitingForReady = true
+          this.worker.postMessage('isready')
+          return
+        }
+        if (waitingForReady && event.data.trim() === 'readyok') {
+          globalThis.clearTimeout(timeout)
+          this.worker.removeEventListener('message', handleMessage)
+          resolve()
+        }
+      }
+      this.worker.addEventListener('message', handleMessage)
+      this.worker.postMessage('uci')
+    })
   }
 
-  bestMove({ fen, moves, skillLevel, nodes }: EngineOptions): Promise<string> {
+  async bestMove({ fen, moves, skillLevel, nodes }: EngineOptions): Promise<string> {
+    await this.ready
     return new Promise((resolve, reject) => {
-      const timeout = window.setTimeout(() => {
+      const timeout = globalThis.setTimeout(() => {
         this.worker.removeEventListener('message', handleMessage)
         reject(new Error('Stockfish did not return a move in time.'))
-      }, 15_000)
+      }, 30_000)
 
       const handleMessage = (event: EngineMessage) => {
         const bestMove = parseBestMove(event.data)
         if (!bestMove) return
-        window.clearTimeout(timeout)
+        globalThis.clearTimeout(timeout)
         this.worker.removeEventListener('message', handleMessage)
         resolve(bestMove)
       }
 
       this.worker.addEventListener('message', handleMessage)
-      this.worker.postMessage('uci')
       this.worker.postMessage(`setoption name Skill Level value ${skillLevel}`)
       this.worker.postMessage(`position fen ${fen}${moves.length ? ` moves ${moves.join(' ')}` : ''}`)
       this.worker.postMessage(`go nodes ${nodes}`)
     })
   }
 
-  analyse({ fen, moves, skillLevel, nodes }: EngineOptions): Promise<{ centipawns: number; bestMove: string | null }> {
+  async analyse({ fen, moves, skillLevel, nodes }: EngineOptions): Promise<{ centipawns: number; bestMove: string | null }> {
+    await this.ready
     return new Promise((resolve, reject) => {
       let latestScore: { centipawns: number; bestMove: string | null } | null = null
-      const timeout = window.setTimeout(() => {
+      const timeout = globalThis.setTimeout(() => {
         this.worker.removeEventListener('message', handleMessage)
         reject(new Error('Stockfish did not finish analysis in time.'))
-      }, 20_000)
+      }, 30_000)
       const handleMessage = (event: EngineMessage) => {
         const score = parseScore(event.data)
         if (score) latestScore = score
         if (!parseBestMove(event.data)) return
-        window.clearTimeout(timeout)
+        globalThis.clearTimeout(timeout)
         this.worker.removeEventListener('message', handleMessage)
         if (!latestScore) reject(new Error('Stockfish returned no evaluation score.'))
         else resolve(latestScore)
       }
       this.worker.addEventListener('message', handleMessage)
-      this.worker.postMessage('uci')
       this.worker.postMessage(`setoption name Skill Level value ${skillLevel}`)
       this.worker.postMessage(`position fen ${fen}${moves.length ? ` moves ${moves.join(' ')}` : ''}`)
       this.worker.postMessage(`go nodes ${nodes}`)
