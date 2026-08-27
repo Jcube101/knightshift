@@ -26,6 +26,15 @@ describe('Knightshift home', () => {
     expect(screen.queryByRole('navigation')?.querySelector('a[href="/history"]')).toBeNull()
   })
 
+  it('keeps Learn as a primary workspace while History remains contextual', () => {
+    render(<App />)
+
+    const nav = screen.getByRole('navigation')
+    expect([...nav.querySelectorAll('a')].map(link => link.textContent)).toEqual(['Home', 'Play', 'Learn', 'Settings'])
+    expect(screen.getByRole('link', { name: 'Learn' })).toHaveAttribute('href', '/learn')
+    expect(nav.querySelector('a[href="/history"]')).toBeNull()
+  })
+
   it('restores an active game checkpoint after a reload', () => {
     localStorage.setItem('knightshift.active-game', JSON.stringify({
       version: 1,

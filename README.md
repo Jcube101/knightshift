@@ -13,6 +13,7 @@ Knightshift is a private, local-first chess improvement workspace. Play Stockfis
 - Three real engine levels: Casual, Steady, and Sharp
 - Deliberate post-game Stockfish analysis with 2–3 saved critical moments
 - Saved reviews and proof-backed recurring-pattern signals on Home
+- Broad opening explorer covering 12 major openings and named variations
 - Mobile tap-to-move and desktop/mobile drag-to-move
 - Completed games and active games saved in browser `localStorage`
 - No account, backend, cloud engine, or game import required
@@ -26,9 +27,10 @@ The information architecture is deliberately small:
 - **Home** is the reflective study page: one next action, a latest lesson when available, one restrained pattern signal, and recent games.
 - **Play** keeps the board dominant, with material and a touch-scrollable move strip above it. Side and difficulty controls remain compact.
 - **Settings** holds durable new-game defaults.
-- **Home, Play, and Settings** are the only primary navigation destinations. The full saved-game archive remains available at `/history` through **All saved games**.
+- **Learn** is the opening-study workspace: a broad survey of opening families and named variations, with a board-backed move explorer.
+- **Home, Play, Learn, and Settings** are the primary navigation destinations. The full saved-game archive remains available at `/history` through **All saved games**.
 
-The visible top row is intentional on mobile and desktop. A hamburger drawer would add friction and imply complexity the current three-workspace app does not have. Read [`DESIGN.md`](./DESIGN.md) for the complete visual system, interaction rules, and decision rationale.
+The visible top row is intentional on mobile and desktop. Four stable workspaces remain comfortable to scan at phone width; a hamburger drawer would add friction and imply complexity the current app does not have. Read [`DESIGN.md`](./DESIGN.md) for the complete visual system, interaction rules, and decision rationale.
 
 ## Stack
 
@@ -120,8 +122,8 @@ Do not deploy source files or a dirty working tree. Verify the live Vite bundle 
 
 ## Roadmap
 
-1. Opening explorer and repertoire saving
-2. Repertoire drilling, once opening content is real enough to deserve a dedicated workspace
+1. Local repertoire saving from the opening explorer
+2. Repertoire drilling, once saved opening content is real enough to deserve it
 3. Deeper board-grounded review explanations, only where the engine evidence supports them
 
 ## Licensing

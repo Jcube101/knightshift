@@ -8,13 +8,14 @@ import { describeReply, moveToSan, type CriticalMoment } from './lib/analysis'
 import { rankLabel } from './lib/review'
 import { readTheme, themes } from './lib/theme'
 import PlayScreen from './screens/PlayScreen'
+import LearnScreen from './screens/LearnScreen'
 import './App.css'
 
 function Shell({ children }: { children: React.ReactNode }) {
   const theme = readTheme()
   const palette = themes[theme]
   const style = { '--theme-background': palette.background, '--theme-glow': palette.glow, '--theme-panel': palette.panel, '--theme-muted-panel': palette.mutedPanel, '--theme-border': palette.border, '--theme-text': palette.text, '--theme-soft-text': palette.softText, '--theme-eyebrow': palette.eyebrow, '--theme-action': palette.action, '--theme-action-text': palette.actionText } as CSSProperties
-  return <main className="app-shell routed-shell" style={style}><header className="route-header"><Link to="/" className="brand">Knightshift</Link><nav>{[['/', 'Home'], ['/play', 'Play'], ['/settings', 'Settings']].map(([to, label]) => <NavLink key={to} to={to} end={to === '/'}>{label}</NavLink>)}</nav></header>{children}</main>
+  return <main className="app-shell routed-shell" style={style}><header className="route-header"><Link to="/" className="brand">Knightshift</Link><nav>{[['/', 'Home'], ['/play', 'Play'], ['/learn', 'Learn'], ['/settings', 'Settings']].map(([to, label]) => <NavLink key={to} to={to} end={to === '/'}>{label}</NavLink>)}</nav></header>{children}</main>
 }
 
 function Home() {
@@ -50,4 +51,4 @@ function Review() {
  return <Shell><section className="route-card"><p className="section-label">SAVED REVIEW</p><h1>{new Date(game.playedAt).toLocaleDateString()}</h1><p className="review-copy">You played {game.playerColor === 'w' ? 'White' : 'Black'} · {game.result} · {game.difficulty}</p><div className="moment-picker">{game.analysis.map(item => <button className={moment === item ? 'moment-button selected' : 'moment-button'} key={`${item.moveIndex}-${item.rank}`} onClick={() => setMoment(item)} type="button">Move {item.moveNumber}: {item.played} · {rankLabel(item.rank)}</button>)}</div>{moment?.beforeFen && <div className="review-detail"><div className="review-board"><Chessboard options={{ id: 'saved-review-board', position: moment.beforeFen, boardOrientation: game.playerColor === 'w' ? 'white' : 'black', showNotation: true, squareStyles: reviewSquareStyles(moment) }} /></div><div><p className="review-legend"><span className="legend-played">Red</span> your move <span className="legend-best">Green</span> better option</p><p className="section-label">MOVE {moment.moveNumber}</p><h2>Instead of {moment.played}, try {moveToSan(moment.beforeFen, moment.best)}</h2><p className="review-copy">{moment.afterFen && moment.replyUci ? describeReply(moment.afterFen, moment.replyUci) ?? moment.explanation : moment.explanation}</p></div></div>}</section></Shell>
 }
 
-export default function App() { return <BrowserRouter><Routes><Route path="/" element={<Home />} /><Route path="/play" element={<PlayScreen />} /><Route path="/history" element={<History />} /><Route path="/settings" element={<Settings />} /><Route path="/review/:gameId" element={<Review />} /></Routes></BrowserRouter> }
+export default function App() { return <BrowserRouter><Routes><Route path="/" element={<Home />} /><Route path="/play" element={<PlayScreen />} /><Route path="/learn" element={<Shell><LearnScreen /></Shell>} /><Route path="/learn/:openingId" element={<Shell><LearnScreen /></Shell>} /><Route path="/history" element={<History />} /><Route path="/settings" element={<Settings />} /><Route path="/review/:gameId" element={<Review />} /></Routes></BrowserRouter> }
