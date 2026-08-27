@@ -38,6 +38,9 @@ select:focus-visible, button:focus-visible, a:focus-visible { outline: 3px solid
 .insight-list strong { color: var(--theme-text); font-family: Newsreader, Georgia, serif; font-size: 1.35rem; }
 .saved-games article { display: grid; gap: 4px; padding: 16px 0; border-bottom: 1px solid var(--theme-border); }
 .saved-games span { color: var(--theme-soft-text); font-size: .88rem; }
+.opening-context { display: grid; gap: 3px; color: var(--theme-soft-text); font-size: .82rem; line-height: 1.4; }
+.opening-context strong { color: var(--theme-text); font-weight: 600; }
+.opening-context small { color: var(--theme-soft-text); font-size: inherit; }
 .saved-games a, .route-card > a:not(.new-game) { color: var(--theme-eyebrow); font-weight: 600; text-decoration-thickness: 1px; text-underline-offset: 3px; }
 .game-layout { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(280px, .65fr); align-items: start; gap: 24px; }
 .board-wrap { min-width: 0; }

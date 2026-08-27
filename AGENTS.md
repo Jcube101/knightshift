@@ -13,6 +13,7 @@ Current scope:
 - Browser-local active-game and completed-game storage
 - Deliberate post-game analysis, saved review moments, and proof-backed recurring insights
 - Broad opening explorer with named variations
+- Conservative opening context for saved completed games and reviews
 - Mobile-first board interaction
 
 Planned, not yet built:
@@ -43,7 +44,7 @@ Do not add accounts, cloud sync, PGN import, social features, or external chess-
 8. **Treat Stockfish startup as asynchronous UCI.** Wait for `uciok`, then `readyok`, before issuing `position` or `go`; start search timeouts only after readiness.
 9. **Initial engine actions must be idempotent per Worker.** React effects can be mounted, cleaned up, and rerun. Tie a Black-default opening to its specific live `StockfishEngine` instance, not a Boolean or changing game state. Cancel writes from discarded Workers, and never request a second opening after the first move updates game state.
 10. **Exercise default-driven Black startup in a browser test.** A regression test must set `knightshift.defaults` to Black at Steady, wait for one opening move, and assert the status is `Your move as Black.`. A nonempty move log alone is insufficient.
-11. **Curate opening content, do not invent it.** Named opening and variation lines must replay legally through `chess.js` and be reconciled against a maintained opening dataset. Keep explanatory notes factual and concise. Do not present an unbounded opening list, engine evaluation, mastery scoring, or drills before a dedicated product slice.
+11. **Opening context describes, it does not diagnose.** Use the maintained local classifier to name a direct legal SAN prefix; never invent a name or variation. A result alone never indicates opening quality. When analysis exists, describe the earliest critical moment only as during or after the recognised line, never with a fixed phase cutoff or causal claim.
 12. **Reset opening-study state at the correct boundary.** A variation change resets its board to move zero. Switching to a different opening must also reset both the selected variation and move position, even though React retains the Learn route component between parameter changes. Cover that navigation transition with a component regression test.
 13. **Study-side selection is a Quiet Study control, not browser chrome.** Use an accessible pressed-state segmented control. The active choice must have a non-color-only programmatic state and moss treatment; inactive choices use the raised surface, divider border, parchment text, and the standard 6px radius with at least 42px touch height. Verify it at mobile and desktop widths.
 

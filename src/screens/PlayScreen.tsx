@@ -8,6 +8,7 @@ import { readDefaults } from '../lib/defaults'
 import { clearActiveGame, loadActiveGame, loadSavedGames, saveActiveGame, saveCompletedGame, type SavedGame } from '../lib/storage'
 import { resolveTap } from '../lib/tapMove'
 import { positionBeforeMove, selectCriticalMoments, type CriticalMoment } from '../lib/analysis'
+import { classifyOpening } from '../lib/openingClassification'
 import { summarizeInsights } from '../lib/insights'
 import { describeGameResult } from '../lib/resultMessage'
 import { createTapGuard } from '../lib/tapGuard'
@@ -155,6 +156,7 @@ function PlayScreen() {
       moves: result.history,
       playerColor,
       difficulty,
+      opening: classifyOpening(result.history),
     }
     saveCompletedGame(savedGame)
     savedGameRef.current = savedGame

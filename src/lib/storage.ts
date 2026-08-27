@@ -1,4 +1,5 @@
 import type { CriticalMoment } from './analysis'
+import type { OpeningClassification } from './openingClassification'
 import type { GameState } from './game'
 
 export type SavedGame = {
@@ -10,6 +11,7 @@ export type SavedGame = {
   difficulty?: string
   analysis?: CriticalMoment[]
   analysisVersion?: 1
+  opening?: OpeningClassification
 }
 
 export type ActiveGame = {

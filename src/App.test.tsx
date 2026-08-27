@@ -35,6 +35,14 @@ describe('Knightshift home', () => {
     expect(nav.querySelector('a[href="/history"]')).toBeNull()
   })
 
+  it('shows conservative opening context for a saved game', () => {
+    localStorage.setItem('knightshift.completed-games', JSON.stringify({ version: 1, games: [{ id: 'sicilian', playedAt: '2026-08-27T00:00:00.000Z', result: '1-0', moves: ['e4', 'c5', 'Nf3', 'd6', 'h4'], playerColor: 'w' }] }))
+    render(<App />)
+
+    expect(screen.getByText('Sicilian Defense')).toBeInTheDocument()
+    expect(screen.getByText('Unclassified continuation after 2 moves')).toBeInTheDocument()
+  })
+
   it('restores an active game checkpoint after a reload', () => {
     localStorage.setItem('knightshift.active-game', JSON.stringify({
       version: 1,

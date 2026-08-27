@@ -14,6 +14,7 @@ Knightshift is a private, local-first chess improvement workspace. Play Stockfis
 - Deliberate post-game Stockfish analysis with 2–3 saved critical moments
 - Saved reviews and proof-backed recurring-pattern signals on Home
 - Broad opening explorer covering 12 major openings and named variations
+- Conservative opening context for saved games, derived locally from legal SAN history
 - Mobile tap-to-move and desktop/mobile drag-to-move
 - Completed games and active games saved in browser `localStorage`
 - No account, backend, cloud engine, or game import required
