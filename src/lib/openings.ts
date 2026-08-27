@@ -115,6 +115,22 @@ export const openings: Opening[] = [
   },
 ]
 
+export type StudySide = 'w' | 'b'
+
+const blackStudyOpeningIds = new Set(['sicilian-defense', 'french-defense', 'caro-kann-defense', 'queens-gambit', 'kings-indian-defense', 'nimzo-indian-defense', 'english-opening'])
+
+export function openingsForStudy(side: StudySide): Opening[] {
+  return side === 'b' ? openings.filter(opening => blackStudyOpeningIds.has(opening.id)) : openings.filter(opening => !blackStudyOpeningIds.has(opening.id) || opening.id === 'queens-gambit' || opening.id === 'english-opening')
+}
+
+export function studyPrompt(variation: OpeningVariation, ply: number, side: StudySide): { actor: 'You' | 'Opponent'; move: string; label: string } | null {
+  const move = variation.san[ply]
+  if (!move) return null
+  const learnerTurn = (ply % 2 === 0) === (side === 'w')
+  if (side === 'b' && ply === 1) return { actor: 'You', move, label: `Your response to 1. ${variation.san[0]}` }
+  return { actor: learnerTurn ? 'You' : 'Opponent', move, label: learnerTurn ? 'Your next move' : 'Opponent’s next move' }
+}
+
 export function openingById(id: string | undefined): Opening | undefined {
   return openings.find(opening => opening.id === id)
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { Chess } from 'chess.js'
-import { openingFamilies, openings, replaySan } from './openings'
+import { openingFamilies, openings, openingsForStudy, replaySan, studyPrompt } from './openings'
 
 describe('curated opening catalogue', () => {
   it('covers the four survey families with twelve major openings', () => {
@@ -18,5 +18,14 @@ describe('curated opening catalogue', () => {
         expect(replaySan(variation.san)).toBeInstanceOf(Chess)
       }
     }
+  })
+
+  it('organises Black study by White’s first move and identifies the learner’s next reply', () => {
+    const blackOpenings = openingsForStudy('b')
+    expect(blackOpenings.map(opening => opening.id)).toContain('sicilian-defense')
+    expect(blackOpenings.map(opening => opening.id)).not.toContain('italian-game')
+
+    const sicilian = blackOpenings.find(opening => opening.id === 'sicilian-defense')!
+    expect(studyPrompt(sicilian.variations[0], 1, 'b')).toEqual({ actor: 'You', move: 'c5', label: 'Your response to 1. e4' })
   })
 })

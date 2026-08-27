@@ -22,6 +22,7 @@ describe('LearnScreen', () => {
     expect(screen.getByText(/Move 8 of/)).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('link', { name: 'All openings' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Learn as Black' }))
     fireEvent.click(screen.getByRole('link', { name: /Caro-Kann Defense/i }))
 
     expect(screen.getByText('Move 0 of 8')).toBeInTheDocument()
