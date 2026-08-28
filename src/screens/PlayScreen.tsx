@@ -62,6 +62,7 @@ function PlayScreen() {
   const [analysing, setAnalysing] = useState(false)
   const [selectedMoment, setSelectedMoment] = useState<CriticalMoment | null>(null)
   const [reviewColor, setReviewColor] = useState<'w' | 'b'>(() => restoredActiveGame?.playerColor ?? 'w')
+  const [reviewId, setReviewId] = useState<string | null>(reviewGame?.id ?? null)
   const [savedGames, setSavedGames] = useState<SavedGame[]>(loadSavedGames)
   const engineRef = useRef<StockfishEngine | null>(null)
   const savedGameRef = useRef<SavedGame | null>(reviewGame)
@@ -141,6 +142,7 @@ function PlayScreen() {
     setAnalysis(null)
     setSelectedMoment(null)
     savedGameRef.current = null
+    setReviewId(null)
     setAnalysing(false)
     setLastCapture(null)
     setNotice(color === 'w' ? 'Fresh board. You play White.' : 'Preparing Stockfish’s White opening…')
@@ -179,6 +181,7 @@ function PlayScreen() {
     }
     saveCompletedGame(savedGame)
     savedGameRef.current = savedGame
+    setReviewId(savedGame.id)
     setSavedGames(loadSavedGames())
     setCompletedResult(result)
     setNotice(`Game complete: ${result.result}. Saved to your local database.`)
@@ -287,7 +290,7 @@ function PlayScreen() {
               <p>{message.detail}</p>
             </div>
             <div className="game-actions">
-              {analysis ? <Link className="new-game" to={`/review/${savedGameRef.current?.id}`}>Open review</Link> : <button className="undo-game" disabled={analysing} type="button" onClick={() => void analyseGame()}>{analysing ? 'Analyzing…' : 'Analyze game'}</button>}
+              {analysis && reviewId ? <Link className="new-game" to={`/review/${reviewId}`}>Open review</Link> : <button className="undo-game" disabled={analysing} type="button" onClick={() => void analyseGame()}>{analysing ? 'Analyzing…' : 'Analyze game'}</button>}
               <button className="new-game" type="button" onClick={resetGame}>Play again</button>
             </div>
           </section>
