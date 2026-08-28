@@ -2,7 +2,7 @@ import { Chess } from 'chess.js'
 import { Chessboard } from 'react-chessboard'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import { applyEngineMove, beginGame, canUndoLastTurn, isPlayersPiece, materialBalance, playMove, undoLastTurn, type GameState } from '../lib/game'
+import { applyEngineMove, beginGame, canUndoLastTurn, isPlayersPiece, isTerminalPosition, materialBalance, playMove, undoLastTurn, type GameState } from '../lib/game'
 import { StockfishEngine } from '../lib/engine'
 import { readDefaults } from '../lib/defaults'
 import { clearActiveGame, loadActiveGame, loadSavedGames, saveActiveGame, saveCompletedGame, type SavedGame } from '../lib/storage'
@@ -203,7 +203,8 @@ function PlayScreen() {
     try {
       for (let index = start; index < game.history.length; index += 2) {
         const before = await engineRef.current.analyse({ fen: game.fen, moves: game.uciHistory.slice(0, index), skillLevel: 12, nodes: 1_500 })
-        const after = await engineRef.current.analyse({ fen: game.fen, moves: game.uciHistory.slice(0, index + 1), skillLevel: 12, nodes: 1_500 })
+        const afterGame = { fen: game.fen, history: game.history.slice(0, index + 1), uciHistory: game.uciHistory.slice(0, index + 1) }
+        const after = isTerminalPosition(afterGame) ? { centipawns: 0, bestMove: undefined } : await engineRef.current.analyse({ fen: game.fen, moves: game.uciHistory.slice(0, index + 1), skillLevel: 12, nodes: 1_500 })
         candidates.push({ moveNumber: Math.floor(index / 2) + 1, moveIndex: index, beforeFen: positionBeforeMove(game.fen, game.history, index), afterFen: positionBeforeMove(game.fen, game.history, index + 1), played: game.history[index], playedUci: game.uciHistory[index], replyUci: after.bestMove ?? undefined, best: before.bestMove ?? 'No continuation available', loss: Math.max(0, before.centipawns + after.centipawns) })
         saveReviewJob({ gameId: savedGame.id, totalPlayerMoves, nextMoveIndex: index + 2, candidates, status: 'paused' })
         setAnalysisProgress({ completed: candidates.length, total: totalPlayerMoves })

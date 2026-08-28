@@ -1,7 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { applyEngineMove, beginGame, isPlayersPiece, materialBalance, playMove, undoLastTurn } from './game'
+import { applyEngineMove, beginGame, isPlayersPiece, isTerminalPosition, materialBalance, playMove, undoLastTurn } from './game'
 
 describe('playMove', () => {
+  it('recognises a checkmating final position as terminal', () => {
+    let game = beginGame()
+    for (const [from, to] of [['e2', 'e4'], ['e7', 'e5'], ['d1', 'h5'], ['b8', 'c6'], ['f1', 'c4'], ['g8', 'f6'], ['h5', 'f7']] as const) {
+      const result = playMove(game, { from, to })
+      if (!result.accepted) throw new Error('expected legal fixture move')
+      game = { fen: result.fen, history: result.history, uciHistory: result.uciHistory }
+    }
+    expect(isTerminalPosition(game)).toBe(true)
+  })
+
   it('accepts a legal player move and records its UCI form for Stockfish', () => {
     const game = beginGame()
 

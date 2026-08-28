@@ -41,6 +41,8 @@ function restore(game: GameState): Chess {
   return board
 }
 
+export function isTerminalPosition(game: GameState): boolean { return restore(game).isGameOver() }
+
 export function isPlayersPiece(game: GameState, square: string, color: 'w' | 'b'): boolean {
   return restore(game).get(square as Square)?.color === color
 }
