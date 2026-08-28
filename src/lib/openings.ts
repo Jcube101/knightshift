@@ -65,6 +65,13 @@ export const openings: Opening[] = [
     ],
   },
   {
+    id: 'scandinavian-defense', family: 'Semi-open defences', name: 'Scandinavian Defense', eco: 'B01', startingMoves: ['e4', 'd5'], idea: 'Black challenges White’s centre immediately with the d-pawn.',
+    variations: [
+      { id: 'scandinavian-main-line', name: 'Main Line', eco: 'B01', san: ['e4', 'd5', 'exd5', 'Qxd5', 'Nc3', 'Qa5'], idea: 'Black recaptures with the queen, then places it on a5 while continuing development.' },
+      { id: 'scandinavian-modern', name: 'Modern Variation', eco: 'B01', san: ['e4', 'd5', 'exd5', 'Nf6', 'd4', 'Nxd5'], idea: 'Black develops with tempo and recaptures the pawn after White supports the centre.' },
+    ],
+  },
+  {
     id: 'french-defense', family: 'Semi-open defences', name: 'French Defense', eco: 'C00', startingMoves: ['e4', 'e6'], idea: 'Black prepares d5 to challenge White’s central pawn chain.',
     variations: [
       { id: 'french-advance', name: 'Advance Variation', eco: 'C02', san: ['e4', 'e6', 'd4', 'd5', 'e5'], idea: 'White closes the centre and gains space with the e-pawn.' },
@@ -117,7 +124,7 @@ export const openings: Opening[] = [
 
 export type StudySide = 'w' | 'b'
 
-const blackStudyOpeningIds = new Set(['sicilian-defense', 'french-defense', 'caro-kann-defense', 'queens-gambit', 'kings-indian-defense', 'nimzo-indian-defense', 'english-opening'])
+const blackStudyOpeningIds = new Set(['sicilian-defense', 'scandinavian-defense', 'french-defense', 'caro-kann-defense', 'queens-gambit', 'kings-indian-defense', 'nimzo-indian-defense', 'english-opening'])
 
 export function openingsForStudy(side: StudySide): Opening[] {
   return side === 'b' ? openings.filter(opening => blackStudyOpeningIds.has(opening.id)) : openings.filter(opening => !blackStudyOpeningIds.has(opening.id) || opening.id === 'queens-gambit' || opening.id === 'english-opening')

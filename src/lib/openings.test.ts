@@ -3,10 +3,11 @@ import { Chess } from 'chess.js'
 import { openingFamilies, openings, openingsForStudy, replaySan, studyPrompt } from './openings'
 
 describe('curated opening catalogue', () => {
-  it('covers the four survey families with twelve major openings', () => {
+  it('covers the four survey families with thirteen major openings', () => {
     expect(openingFamilies).toEqual(['Open games', 'Semi-open defences', 'Queen’s pawn and Indian structures', 'Flank openings'])
-    expect(openings).toHaveLength(12)
-    expect(new Set(openings.map(opening => opening.id)).size).toBe(12)
+    expect(openings).toHaveLength(13)
+    expect(new Set(openings.map(opening => opening.id)).size).toBe(13)
+    expect(openings.map(opening => opening.id)).toContain('scandinavian-defense')
   })
 
   it('gives every opening a named, legal variation', () => {

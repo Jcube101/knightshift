@@ -84,7 +84,7 @@ select:focus-visible, button:focus-visible, a:focus-visible { outline: 3px solid
 .learn-page { display: grid; gap: 24px; }
 .learn-intro { max-width: 62ch; padding: 12px 0 4px; }
 .learn-intro > p:not(.section-label), .learn-detail-heading > p { color: var(--theme-soft-text); }
-.opening-families { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.opening-families { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 16px; }
 .opening-family { display: grid; gap: 8px; padding: 20px; border: 1px solid var(--theme-border); border-radius: 12px; background: var(--theme-panel); }
 .opening-family a { display: grid; gap: 3px; padding: 10px 0; border-bottom: 1px solid var(--theme-border); color: var(--theme-text); text-decoration: none; }
 .opening-family a:last-child { border-bottom: 0; }
