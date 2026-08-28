@@ -16,6 +16,13 @@ describe('describeGameResult', () => {
     })
   })
 
+  it('identifies a resignation from the player perspective', () => {
+    expect(describeGameResult({ result: '0-1', termination: 'resignation' }, 'w')).toEqual({
+      title: 'You resigned.',
+      detail: 'The game has been saved to your local database.',
+    })
+  })
+
   it('identifies other drawn games without calling them stalemate', () => {
     expect(describeGameResult({ result: '1/2-1/2', termination: 'draw' }, 'w')).toEqual({
       title: 'Draw.',

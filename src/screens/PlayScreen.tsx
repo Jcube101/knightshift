@@ -2,7 +2,7 @@ import { Chess } from 'chess.js'
 import { Chessboard } from 'react-chessboard'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import { applyEngineMove, beginGame, canUndoLastTurn, isPlayersPiece, isTerminalPosition, materialBalance, playMove, undoLastTurn, type GameState } from '../lib/game'
+import { applyEngineMove, beginGame, canUndoLastTurn, isPlayersPiece, isTerminalPosition, materialBalance, playMove, resignGame, undoLastTurn, type GameState } from '../lib/game'
 import { StockfishEngine } from '../lib/engine'
 import { readDefaults } from '../lib/defaults'
 import { clearActiveGame, loadActiveGame, loadSavedGames, saveActiveGame, saveCompletedGame, type SavedGame } from '../lib/storage'
@@ -163,6 +163,12 @@ function PlayScreen() {
     setNotice('Undid your last turn. Your move.')
   }
 
+  function resignCurrentGame() {
+    if (thinking || completedResult || reviewGame) return
+    if (!window.confirm('Resign this game? It will be saved as a loss.')) return
+    saveResult(resignGame(game, playerColor))
+  }
+
   function recordCapture(captured: keyof typeof piecePoints | null, actor: 'You' | 'Stockfish') {
     if (!captured) return
     setLastCapture(`${actor} captured a ${pieceLabels[captured]}, +${piecePoints[captured]}`)
@@ -179,6 +185,7 @@ function PlayScreen() {
       playerColor,
       difficulty,
       opening: classifyOpening(result.history),
+      termination: result.termination ?? undefined,
     }
     saveCompletedGame(savedGame)
     savedGameRef.current = savedGame
@@ -279,6 +286,7 @@ function PlayScreen() {
         </div>
         <div className="game-actions">
           <button className="undo-game" disabled={!canUndo} type="button" onClick={undoTurn}>Undo last turn</button>
+          <button className="resign-game" disabled={thinking || Boolean(completedResult) || Boolean(reviewGame)} type="button" onClick={resignCurrentGame}>Resign game</button>
           <button className="new-game" type="button" onClick={resetGame}>New game</button>
         </div>
       </header>

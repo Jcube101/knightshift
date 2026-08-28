@@ -22,10 +22,13 @@ p { line-height: 1.55; }
 .route-card { padding: clamp(20px, 4vw, 32px); margin-bottom: 16px; }
 .hero-card { padding-block: clamp(34px, 8vw, 68px); }
 .hero-card > p:not(.section-label), .review-copy { max-width: 60ch; color: var(--theme-soft-text); }
-.new-game, .undo-game, .moment-button { display: inline-flex; align-items: center; justify-content: center; min-height: 42px; border-radius: 6px; padding: 10px 14px; font-size: .78rem; font-weight: 700; letter-spacing: .015em; text-decoration: none; cursor: pointer; transition: background-color .16s ease, color .16s ease, border-color .16s ease; }
+.new-game, .undo-game, .resign-game, .moment-button { display: inline-flex; align-items: center; justify-content: center; min-height: 42px; border-radius: 6px; padding: 10px 14px; font-size: .78rem; font-weight: 700; letter-spacing: .015em; text-decoration: none; cursor: pointer; transition: background-color .16s ease, color .16s ease, border-color .16s ease; }
 .new-game { border: 1px solid var(--theme-action); background: var(--theme-action); color: var(--theme-action-text); }
 .new-game:hover { background: #385238; border-color: #385238; color: #F5F1E8; }
 .undo-game, .moment-button { border: 1px solid var(--theme-border); background: transparent; color: var(--theme-text); }
+.resign-game { border: 1px solid color-mix(in srgb, #dc4646 64%, var(--theme-border)); background: transparent; color: #f3b0a6; }
+.resign-game:hover { border-color: #dc4646; background: color-mix(in srgb, #dc4646 14%, transparent); color: #ffd5ce; }
+.resign-game:disabled { opacity: .42; cursor: not-allowed; }
 .undo-game:hover, .moment-button:hover, .moment-button.selected { border-color: var(--theme-eyebrow); background: var(--theme-muted-panel); }
 .undo-game:disabled { opacity: .42; cursor: not-allowed; }
 .hero-card .new-game { margin-top: 12px; }

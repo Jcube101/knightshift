@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { applyEngineMove, beginGame, isPlayersPiece, isTerminalPosition, materialBalance, playMove, undoLastTurn } from './game'
+import { applyEngineMove, beginGame, isPlayersPiece, isTerminalPosition, materialBalance, playMove, resignGame, undoLastTurn } from './game'
 
 describe('playMove', () => {
+  it('records resignation as a loss without changing the saved move history', () => {
+    const game = beginGame()
+    const result = resignGame(game, 'w')
+
+    expect(result).toMatchObject({ accepted: true, result: '0-1', termination: 'resignation', history: [], uciHistory: [] })
+  })
+
   it.each([
     ['White win', 'w', { fen: '7k/5Q2/6K1/8/8/8/8/8 w - - 0 1', history: [], uciHistory: [] }, { from: 'f7', to: 'g7' }],
     ['White loss', 'w', { fen: '8/8/8/8/8/5pqk/8/7K b - - 0 1', history: [], uciHistory: [] }, { from: 'g3', to: 'g2' }],

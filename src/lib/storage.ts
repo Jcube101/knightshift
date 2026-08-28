@@ -1,11 +1,13 @@
 import type { CriticalMoment } from './analysis'
 import type { OpeningClassification } from './openingClassification'
+import type { GameTermination } from './resultMessage'
 import type { GameState } from './game'
 
 export type SavedGame = {
   id: string
   playedAt: string
   result: '1-0' | '0-1' | '1/2-1/2'
+  termination?: GameTermination
   moves: string[]
   playerColor?: 'w' | 'b'
   difficulty?: string
