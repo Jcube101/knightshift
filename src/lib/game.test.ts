@@ -2,6 +2,17 @@ import { describe, expect, it } from 'vitest'
 import { applyEngineMove, beginGame, isPlayersPiece, isTerminalPosition, materialBalance, playMove, undoLastTurn } from './game'
 
 describe('playMove', () => {
+  it.each([
+    ['White win', 'w', { fen: '7k/5Q2/6K1/8/8/8/8/8 w - - 0 1', history: [], uciHistory: [] }, { from: 'f7', to: 'g7' }],
+    ['White loss', 'w', { fen: '8/8/8/8/8/5pqk/8/7K b - - 0 1', history: [], uciHistory: [] }, { from: 'g3', to: 'g2' }],
+    ['Black win', 'b', { fen: '8/8/8/8/8/5pqk/8/7K b - - 0 1', history: [], uciHistory: [] }, { from: 'g3', to: 'g2' }],
+    ['Black loss', 'b', { fen: '7k/5Q2/6K1/8/8/8/8/8 w - - 0 1', history: [], uciHistory: [] }, { from: 'f7', to: 'g7' }],
+  ] as const)('recognises the terminal review position for a %s', (_scenario, playerColor, game, move) => {
+    const result = playMove({ ...game, history: [...game.history], uciHistory: [...game.uciHistory] }, { ...move }, playerColor)
+    if (!result.accepted) throw new Error('expected legal terminal fixture move')
+    expect(isTerminalPosition({ fen: result.fen, history: result.history, uciHistory: result.uciHistory })).toBe(true)
+  })
+
   it('recognises a checkmating final position as terminal', () => {
     let game = beginGame()
     for (const [from, to] of [['e2', 'e4'], ['e7', 'e5'], ['d1', 'h5'], ['b8', 'c6'], ['f1', 'c4'], ['g8', 'f6'], ['h5', 'f7']] as const) {
