@@ -60,6 +60,7 @@ function PlayScreen() {
   const [theme] = useState<ThemeId>(readTheme)
   const [analysis, setAnalysis] = useState<CriticalMoment[] | null>(null)
   const [analysing, setAnalysing] = useState(false)
+  const [analysisProgress, setAnalysisProgress] = useState<{ completed: number; total: number } | null>(null)
   const [selectedMoment, setSelectedMoment] = useState<CriticalMoment | null>(null)
   const [reviewColor, setReviewColor] = useState<'w' | 'b'>(() => restoredActiveGame?.playerColor ?? 'w')
   const [reviewId, setReviewId] = useState<string | null>(reviewGame?.id ?? null)
@@ -197,6 +198,7 @@ function PlayScreen() {
     const start = normalized?.nextMoveIndex ?? (playerColor === 'w' ? 0 : 1)
     const candidates = normalized?.candidates ?? []
     const totalPlayerMoves = Math.ceil((game.history.length - (playerColor === 'w' ? 0 : 1)) / 2)
+    setAnalysisProgress({ completed: candidates.length, total: totalPlayerMoves })
     setNotice(`Reviewing your moves, ${Math.floor(candidates.length / 1) + 1} of ${totalPlayerMoves}`)
     try {
       for (let index = start; index < game.history.length; index += 2) {
@@ -204,6 +206,7 @@ function PlayScreen() {
         const after = await engineRef.current.analyse({ fen: game.fen, moves: game.uciHistory.slice(0, index + 1), skillLevel: 12, nodes: 1_500 })
         candidates.push({ moveNumber: Math.floor(index / 2) + 1, moveIndex: index, beforeFen: positionBeforeMove(game.fen, game.history, index), afterFen: positionBeforeMove(game.fen, game.history, index + 1), played: game.history[index], playedUci: game.uciHistory[index], replyUci: after.bestMove ?? undefined, best: before.bestMove ?? 'No continuation available', loss: Math.max(0, before.centipawns + after.centipawns) })
         saveReviewJob({ gameId: savedGame.id, totalPlayerMoves, nextMoveIndex: index + 2, candidates, status: 'paused' })
+        setAnalysisProgress({ completed: candidates.length, total: totalPlayerMoves })
         setNotice(`Reviewing your moves, ${candidates.length} of ${totalPlayerMoves}`)
       }
       const moments = selectCriticalMoments(candidates)
@@ -290,7 +293,7 @@ function PlayScreen() {
               <p>{message.detail}</p>
             </div>
             <div className="game-actions">
-              {analysis && reviewId ? <Link className="new-game" to={`/review/${reviewId}`}>Open review</Link> : <button className="undo-game" disabled={analysing} type="button" onClick={() => void analyseGame()}>{analysing ? 'Analyzing…' : 'Analyze game'}</button>}
+              {analysis && reviewId ? <Link className="new-game" to={`/review/${reviewId}`}>Open review</Link> : <button className="undo-game" disabled={analysing} type="button" onClick={() => void analyseGame()}>{analysing ? `Analyzing ${analysisProgress?.completed ?? 0} of ${analysisProgress?.total ?? 0} moves` : 'Analyze game'}</button>}
               <button className="new-game" type="button" onClick={resetGame}>Play again</button>
             </div>
           </section>
