@@ -11,7 +11,7 @@ Knightshift is a private, local-first chess improvement workspace. Play Stockfis
 - Choose White or Black for an individual new game
 - When playing Black, Stockfish makes the opening White move before input is enabled
 - Three real engine levels: Casual, Steady, and Sharp
-- Deliberate post-game Stockfish analysis with 2–3 saved critical moments
+- Deliberate post-game Stockfish analysis with live per-move progress, durable resume, and 2–3 saved critical moments
 - Saved reviews and proof-backed recurring-pattern signals on Home
 - Broad opening explorer covering 12 major openings and named variations
 - Conservative opening context for saved games, derived locally from legal SAN history
@@ -108,7 +108,9 @@ Knightshift uses versioned browser-local storage. Completed games persist under 
 
 An active checkpoint captures the position, SAN/UCI history, player side, difficulty, and latest capture cue. It is restored after a browser reload. Settings defaults are applied only when no active checkpoint exists and a new game begins. Changing Settings never rewrites an active or completed game. The active checkpoint is cleared only when the player deliberately starts a new game or completes one; completed games remain saved.
 
-Clearing site storage clears saved games, the active checkpoint, and Settings defaults. There is no sync or account system yet.
+Post-game reviews use a separate `knightshift.review-jobs` record. Each completed player-move evaluation is saved immediately. Home and History show the truthful saved-move count and return to Play for `Resume review`. A browser Worker cannot run after a tab closes, so the product promises resumption from saved work, not background execution. When a review completes, Play remains open and offers `Open review`; it never redirects automatically.
+
+Clearing site storage clears saved games, review jobs, the active checkpoint, and Settings defaults. There is no sync or account system yet.
 
 ## Deployment
 

@@ -48,6 +48,8 @@ Do not add accounts, cloud sync, PGN import, social features, or external chess-
 12. **Reset opening-study state at the correct boundary.** A variation change resets its board to move zero. Switching to a different opening must also reset both the selected variation and move position, even though React retains the Learn route component between parameter changes. Cover that navigation transition with a component regression test.
 13. **Study-side selection is a Quiet Study control, not browser chrome.** Use an accessible pressed-state segmented control. The active choice must have a non-color-only programmatic state and moss treatment; inactive choices use the raised surface, divider border, parchment text, and the standard 6px radius with at least 42px touch height. Verify it at mobile and desktop widths.
 
+14. **Post-game review progress is durable and truthful.** Save each completed player-move evaluation under `knightshift.review-jobs`; deduplicate by move index before resuming. Show a live `Analyzing N of total moves` count, never a fake estimate. A Worker cannot outlive a closed tab, so offer Resume review from saved work rather than promising background execution. On completion, keep the player in Play and offer `Open review`; do not redirect automatically.
+
 ## Key files
 
 | Path | Purpose |
@@ -62,6 +64,7 @@ Do not add accounts, cloud sync, PGN import, social features, or external chess-
 | `src/lib/tapMove.ts` | Tap-selection state transition |
 | `src/lib/tapGuard.ts` | Suppresses one post-drop trailing tap |
 | `src/lib/storage.ts` | Completed-game `localStorage` persistence |
+| `src/lib/reviewJob.ts` | Durable post-game review checkpoints and resume normalization |
 | `scripts/stage-stockfish.mjs` | Stages WASM and GPL assets into `public/stockfish/` |
 | `e2e/mobile-tap.spec.ts` | Real mobile-emulated browser smoke test |
 | `playwright.config.ts` | Local Vite server and mobile Chromium setup |
