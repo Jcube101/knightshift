@@ -108,7 +108,7 @@ Knightshift uses versioned browser-local storage. Completed games persist under 
 
 An active checkpoint captures the position, SAN/UCI history, player side, difficulty, and latest capture cue. It is restored after a browser reload. Settings defaults are applied only when no active checkpoint exists and a new game begins. Changing Settings never rewrites an active or completed game. The active checkpoint is cleared only when the player deliberately starts a new game or completes one; completed games remain saved.
 
-Post-game reviews use a separate `knightshift.review-jobs` record. Each completed player-move evaluation is saved immediately. Home and History show the truthful saved-move count and return to Play for `Resume review`. A browser Worker cannot run after a tab closes, so the product promises resumption from saved work, not background execution. When a review completes, Play remains open and offers `Open review`; it never redirects automatically.
+Post-game reviews use a separate `knightshift.review-jobs` record. Each completed player-move evaluation is saved immediately. Home and History show the truthful saved-move count and return to Play for `Resume review`. A browser Worker cannot run after a tab closes, so the product promises resumption from saved work, not background execution. If the final player move ends the game, whether by checkmate, stalemate, or draw, Knightshift saves it without requesting an impossible post-game engine reply. When a review completes, Play remains open and offers `Open review`; it never redirects automatically.
 
 Clearing site storage clears saved games, review jobs, the active checkpoint, and Settings defaults. There is no sync or account system yet.
 
