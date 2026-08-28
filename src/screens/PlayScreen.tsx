@@ -1,6 +1,6 @@
 import { Chess } from 'chess.js'
 import { Chessboard } from 'react-chessboard'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { applyEngineMove, beginGame, canUndoLastTurn, isPlayersPiece, materialBalance, playMove, undoLastTurn, type GameState } from '../lib/game'
 import { StockfishEngine } from '../lib/engine'
@@ -68,7 +68,6 @@ function PlayScreen() {
   const tapGuardRef = useRef(createTapGuard(250))
   const moveLogRef = useRef<HTMLDivElement | null>(null)
   const initialBlackEngineRef = useRef<StockfishEngine | null>(null)
-  const navigate = useNavigate()
   const position = useMemo(() => positionFor(game), [game])
   const material = useMemo(() => materialBalance(game, playerColor), [game, playerColor])
   const insights = useMemo(() => summarizeInsights(savedGames.filter((savedGame) => savedGame.analysisVersion === 1 && savedGame.analysis)), [savedGames])
@@ -206,7 +205,10 @@ function PlayScreen() {
       }
       const moments = selectCriticalMoments(candidates)
       const analysedGame = { ...savedGame, analysis: moments, analysisVersion: 1 as const }
-      saveCompletedGame(analysedGame); savedGameRef.current = analysedGame; saveReviewJob({ gameId: savedGame.id, totalPlayerMoves, nextMoveIndex: game.history.length, candidates, status: 'complete' }); setSavedGames(loadSavedGames()); navigate('/')
+      setAnalysis(moments)
+      setSelectedMoment(moments.find((moment) => moment.rank === 1) ?? null)
+      setReviewColor(playerColor)
+      saveCompletedGame(analysedGame); savedGameRef.current = analysedGame; saveReviewJob({ gameId: savedGame.id, totalPlayerMoves, nextMoveIndex: game.history.length, candidates, status: 'complete' }); setSavedGames(loadSavedGames()); setNotice('Post-game review ready.')
     } catch (error) { saveReviewJob({ gameId: savedGame.id, totalPlayerMoves, nextMoveIndex: start, candidates, status: 'failed' }); setNotice(error instanceof Error ? `${error.message} Return to resume review.` : 'Review paused. Return to resume review.') } finally { setAnalysing(false) }
   }
 
@@ -285,7 +287,7 @@ function PlayScreen() {
               <p>{message.detail}</p>
             </div>
             <div className="game-actions">
-              <button className="undo-game" disabled={analysing} type="button" onClick={() => void analyseGame()}>{analysing ? 'Analyzing…' : 'Analyze game'}</button>
+              {analysis ? <Link className="new-game" to={`/review/${savedGameRef.current?.id}`}>Open review</Link> : <button className="undo-game" disabled={analysing} type="button" onClick={() => void analyseGame()}>{analysing ? 'Analyzing…' : 'Analyze game'}</button>}
               <button className="new-game" type="button" onClick={resetGame}>Play again</button>
             </div>
           </section>
