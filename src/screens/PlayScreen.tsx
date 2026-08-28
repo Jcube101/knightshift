@@ -274,7 +274,7 @@ function PlayScreen() {
     <main className="app-shell" data-theme={theme} style={themeStyle}>
       <header className="topbar">
         <div>
-          <p className="eyebrow">PERSONAL CHESS WORKSPACE</p>
+          <p className="eyebrow">YOUR CHESS STUDY</p>
           <h1><Link to="/">Knightshift</Link></h1>
         </div>
         <div className="game-actions">

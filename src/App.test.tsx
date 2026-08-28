@@ -12,11 +12,12 @@ describe('Knightshift home', () => {
     localStorage.clear()
   })
 
-  it('shows a focused home dashboard and play entry point', () => {
+  it('uses personal, non-repetitive copy for the home entry point', () => {
     render(<App />)
 
-    expect(screen.getByRole('heading', { name: 'Play with purpose.' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Play a game' })).toHaveAttribute('href', '/play')
+    expect(screen.getByText('YOUR CHESS STUDY')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Your next game' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Start a game' })).toHaveAttribute('href', '/play')
   })
 
   it('makes the Home dashboard the entry to the saved-game archive', () => {
