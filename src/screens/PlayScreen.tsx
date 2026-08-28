@@ -165,7 +165,7 @@ function PlayScreen() {
 
   function resignCurrentGame() {
     if (thinking || completedResult || reviewGame) return
-    if (!window.confirm('Resign this game? It will be saved as a loss.')) return
+    if (!window.confirm('Resign this game?')) return
     saveResult(resignGame(game, playerColor))
   }
 
