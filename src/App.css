@@ -42,6 +42,7 @@ select:focus-visible, button:focus-visible, a:focus-visible { outline: 3px solid
 .opening-context strong { color: var(--theme-text); font-weight: 600; }
 .opening-context small { color: var(--theme-soft-text); font-size: inherit; }
 .saved-games a, .route-card > a:not(.new-game) { color: var(--theme-eyebrow); font-weight: 600; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.delete-game { justify-self: start; min-height: 32px; padding: 4px 0; color: var(--theme-soft-text); background: transparent; border: 0; text-decoration: underline; text-underline-offset: 3px; font: inherit; font-size: .82rem; }
 .game-layout { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(280px, .65fr); align-items: start; gap: 24px; }
 .board-wrap { min-width: 0; }
 .engine-board, .review-board { overflow: hidden; border: 1px solid var(--theme-border); border-radius: 10px; background: var(--theme-background); box-shadow: 0 18px 45px var(--theme-background); }

@@ -55,6 +55,11 @@ export function saveCompletedGame(game: SavedGame): void {
   localStorage.setItem(completedGamesKey, JSON.stringify(envelope))
 }
 
+export function deleteCompletedGame(gameId: string): void {
+  const envelope: CompletedGamesEnvelope = { version: 1, games: loadSavedGames().filter(game => game.id !== gameId) }
+  localStorage.setItem(completedGamesKey, JSON.stringify(envelope))
+}
+
 export function loadActiveGame(): ActiveGame | null {
   const stored = parseStoredValue(activeGameKey)
   if (!stored || typeof stored !== 'object' || !('version' in stored) || stored.version !== 1 || !('activeGame' in stored)) return null

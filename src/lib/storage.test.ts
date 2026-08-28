@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it } from 'vitest'
-import { clearActiveGame, loadActiveGame, loadSavedGames, saveActiveGame, saveCompletedGame } from './storage'
+import { clearActiveGame, deleteCompletedGame, loadActiveGame, loadSavedGames, saveActiveGame, saveCompletedGame } from './storage'
 
 beforeEach(() => localStorage.clear())
 
@@ -45,6 +45,13 @@ describe('completed-game storage', () => {
     localStorage.setItem('knightshift.completed-games', JSON.stringify([{ id: 'legacy', playedAt: '2026-08-22T09:00:00.000Z', result: '1-0', moves: ['e4'] }]))
 
     expect(loadSavedGames().map((game) => game.id)).toEqual(['legacy'])
+  })
+
+  it('deletes only the selected completed game', () => {
+    saveCompletedGame({ id: 'keep', playedAt: '2026-08-23T09:00:00.000Z', result: '1-0', moves: ['e4'] })
+    saveCompletedGame({ id: 'remove', playedAt: '2026-08-24T09:00:00.000Z', result: '0-1', moves: ['d4'] })
+    deleteCompletedGame('remove')
+    expect(loadSavedGames().map(game => game.id)).toEqual(['keep'])
   })
 
   it('returns no games when browser storage is empty', () => {
