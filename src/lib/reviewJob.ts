@@ -20,6 +20,9 @@ function jobs(): ReviewJob[] {
 export function loadReviewJob(gameId: string): ReviewJob | null { return jobs().find(job => job.gameId === gameId) ?? null }
 export function saveReviewJob(job: ReviewJob): void { localStorage.setItem(reviewJobsKey, JSON.stringify([job, ...jobs().filter(saved => saved.gameId !== job.gameId)])) }
 
-export function nextPlayerMoveIndex(job: ReviewJob, playerColor: 'w' | 'b'): number {
-  return Math.max(playerColor === 'w' ? 0 : 1, job.nextMoveIndex + 2)
+export function normalizeReviewJob(job: ReviewJob, playerColor: 'w' | 'b'): ReviewJob {
+  const candidates = [...new Map(job.candidates.map(candidate => [candidate.moveIndex, candidate])).values()].toSorted((left, right) => (left.moveIndex ?? 0) - (right.moveIndex ?? 0))
+  const first = playerColor === 'w' ? 0 : 1
+  const nextMoveIndex = first + candidates.length * 2
+  return { ...job, candidates, nextMoveIndex, status: job.status === 'complete' ? 'complete' : 'paused' }
 }

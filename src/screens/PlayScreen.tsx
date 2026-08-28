@@ -13,7 +13,7 @@ import { summarizeInsights } from '../lib/insights'
 import { describeGameResult } from '../lib/resultMessage'
 import { createTapGuard } from '../lib/tapGuard'
 import { latestMoveScrollLeft } from '../lib/moveLogScroll'
-import { loadReviewJob, saveReviewJob } from '../lib/reviewJob'
+import { loadReviewJob, normalizeReviewJob, saveReviewJob } from '../lib/reviewJob'
 import { readTheme, themes, type ThemeId } from '../lib/theme'
 import '../App.css'
 
@@ -191,8 +191,9 @@ function PlayScreen() {
     if (!engineRef.current || analysing || !savedGame) return
     setAnalysing(true)
     const existing = loadReviewJob(savedGame.id)
-    const start = existing?.nextMoveIndex ?? (playerColor === 'w' ? 0 : 1)
-    const candidates = existing?.candidates ?? []
+    const normalized = existing ? normalizeReviewJob(existing, playerColor) : null
+    const start = normalized?.nextMoveIndex ?? (playerColor === 'w' ? 0 : 1)
+    const candidates = normalized?.candidates ?? []
     const totalPlayerMoves = Math.ceil((game.history.length - (playerColor === 'w' ? 0 : 1)) / 2)
     setNotice(`Reviewing your moves, ${Math.floor(candidates.length / 1) + 1} of ${totalPlayerMoves}`)
     try {

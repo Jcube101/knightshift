@@ -9,7 +9,7 @@ import { rankLabel } from './lib/review'
 import { readTheme, themes } from './lib/theme'
 import { openingForSavedGame, openingLabel } from './lib/savedGameOpening'
 import { openingReflection } from './lib/openingReflection'
-import { loadReviewJob } from './lib/reviewJob'
+import { loadReviewJob, normalizeReviewJob } from './lib/reviewJob'
 import PlayScreen from './screens/PlayScreen'
 import LearnScreen from './screens/LearnScreen'
 import './App.css'
@@ -37,7 +37,8 @@ function OpeningContext({ game }: { game: ReturnType<typeof loadSavedGames>[numb
 function ReviewStatus({ game }: { game: ReturnType<typeof loadSavedGames>[number] }) {
   if (game.analysis) return <Link to={`/review/${game.id}`}>Open saved review{game.analysis.length ? ` · ${game.analysis.length} moments` : ''}</Link>
   const job = loadReviewJob(game.id)
-  return job && job.status !== 'complete' ? <Link to={`/play?review=${game.id}`}>Review in progress · {job.candidates.length} of {job.totalPlayerMoves} moves saved</Link> : <span>Waiting for analysis</span>
+  const normalized = job ? normalizeReviewJob(job, game.playerColor ?? 'w') : null
+  return normalized && normalized.status !== 'complete' ? <Link to={`/play?review=${game.id}`}>Review in progress · {normalized.candidates.length} of {normalized.totalPlayerMoves} moves saved</Link> : <span>Waiting for analysis</span>
 }
 
 function Home() {
