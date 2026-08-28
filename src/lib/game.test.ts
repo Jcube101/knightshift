@@ -13,6 +13,15 @@ describe('playMove', () => {
     expect(isTerminalPosition({ fen: result.fen, history: result.history, uciHistory: result.uciHistory })).toBe(true)
   })
 
+  it.each([
+    ['stalemate', { fen: '7k/5K2/5Q2/8/8/8/8/8 w - - 0 1', history: [], uciHistory: [] }, { from: 'f6', to: 'g6' }],
+    ['fifty-move draw', { fen: '7k/8/8/8/8/8/6R1/K7 w - - 99 1', history: [], uciHistory: [] }, { from: 'g2', to: 'g4' }],
+  ] as const)('recognises a terminal %s after the player final move', (_outcome, game, move) => {
+    const result = playMove({ ...game, history: [...game.history], uciHistory: [...game.uciHistory] }, { ...move })
+    if (!result.accepted) throw new Error('expected legal terminal fixture move')
+    expect(isTerminalPosition({ fen: result.fen, history: result.history, uciHistory: result.uciHistory })).toBe(true)
+  })
+
   it('recognises a checkmating final position as terminal', () => {
     let game = beginGame()
     for (const [from, to] of [['e2', 'e4'], ['e7', 'e5'], ['d1', 'h5'], ['b8', 'c6'], ['f1', 'c4'], ['g8', 'f6'], ['h5', 'f7']] as const) {
