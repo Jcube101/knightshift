@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it } from 'vitest'
+import { loadSyncOutbox } from './sync/outbox'
 import { clearActiveGame, deleteCompletedGame, loadActiveGame, loadSavedGames, saveActiveGame, saveCompletedGame } from './storage'
 
 beforeEach(() => localStorage.clear())
@@ -10,6 +11,14 @@ describe('completed-game storage', () => {
     saveCompletedGame({ id: 'second', playedAt: '2026-08-23T09:00:00.000Z', result: '0-1', moves: ['d4', 'd5'] })
 
     expect(loadSavedGames().map((game) => game.id)).toEqual(['second', 'first'])
+    expect(loadSyncOutbox()).toHaveLength(2)
+    expect(loadSyncOutbox().map(operation => operation.id)).toEqual(['game:first', 'game:second'])
+  })
+
+  it('does not queue the device-local active game checkpoint', () => {
+    saveActiveGame({ game: { fen: 'start', history: [], uciHistory: [] }, playerColor: 'w', difficulty: 'Steady', lastCapture: null })
+
+    expect(loadSyncOutbox()).toEqual([])
   })
 
   it('restores a versioned active game checkpoint', () => {

@@ -1,6 +1,8 @@
 import type { CriticalMoment } from './analysis'
 import type { OpeningClassification } from './openingClassification'
 import type { GameTermination } from './resultMessage'
+import { completedGameRecord } from './sync/records'
+import { enqueueSyncOperation } from './sync/outbox'
 import type { GameState } from './game'
 
 export type SavedGame = {
@@ -55,6 +57,12 @@ export function saveCompletedGame(game: SavedGame): void {
   const games = loadSavedGames().filter((saved) => saved.id !== game.id)
   const envelope: CompletedGamesEnvelope = { version: 1, games: [game, ...games] }
   localStorage.setItem(completedGamesKey, JSON.stringify(envelope))
+  enqueueSyncOperation({
+    id: `game:${game.id}`,
+    kind: 'completed-game',
+    payload: completedGameRecord(game),
+    createdAt: new Date().toISOString(),
+  })
 }
 
 export function deleteCompletedGame(gameId: string): void {

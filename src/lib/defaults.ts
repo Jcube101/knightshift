@@ -1,3 +1,6 @@
+import { enqueueSyncOperation } from './sync/outbox'
+import { settingsRecord } from './sync/records'
+
 export type Defaults = { side: 'w' | 'b'; difficulty: 'Casual' | 'Steady' | 'Sharp' }
 
 const defaultsKey = 'knightshift.defaults'
@@ -17,4 +20,5 @@ export function readDefaults(): Defaults {
 
 export function saveDefaults(defaults: Defaults): void {
   localStorage.setItem(defaultsKey, JSON.stringify(defaults))
+  enqueueSyncOperation({ id: 'settings', kind: 'settings', payload: settingsRecord(defaults, 0), createdAt: new Date().toISOString() })
 }

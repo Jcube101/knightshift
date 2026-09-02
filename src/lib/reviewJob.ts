@@ -1,4 +1,6 @@
 import type { CandidateMoment } from './analysis'
+import { reviewCandidateRecord } from './sync/records'
+import { enqueueSyncOperation } from './sync/outbox'
 
 export type ReviewJob = {
   gameId: string
@@ -18,7 +20,27 @@ function jobs(): ReviewJob[] {
 }
 
 export function loadReviewJob(gameId: string): ReviewJob | null { return jobs().find(job => job.gameId === gameId) ?? null }
-export function saveReviewJob(job: ReviewJob): void { localStorage.setItem(reviewJobsKey, JSON.stringify([job, ...jobs().filter(saved => saved.gameId !== job.gameId)])) }
+export function saveReviewJob(job: ReviewJob): void {
+  localStorage.setItem(reviewJobsKey, JSON.stringify([job, ...jobs().filter(saved => saved.gameId !== job.gameId)]))
+
+  for (const candidate of job.candidates) {
+    if (candidate.moveIndex === undefined) continue
+    const record = reviewCandidateRecord(job.gameId, candidate)
+    enqueueSyncOperation({ id: `candidate:${record.syncKey}`, kind: 'review-candidate', payload: record, createdAt: new Date().toISOString() })
+  }
+
+  enqueueSyncOperation({
+    id: `review-status:${job.gameId}`,
+    kind: 'review-status',
+    payload: {
+      collection: 'knightshift_review_status',
+      gameClientId: job.gameId,
+      payloadVersion: 1,
+      payload: { status: job.status, nextMoveIndex: job.nextMoveIndex, totalPlayerMoves: job.totalPlayerMoves },
+    },
+    createdAt: new Date().toISOString(),
+  })
+}
 export function deleteReviewJob(gameId: string): void { localStorage.setItem(reviewJobsKey, JSON.stringify(jobs().filter(job => job.gameId !== gameId))) }
 
 export function normalizeReviewJob(job: ReviewJob, playerColor: 'w' | 'b'): ReviewJob {
