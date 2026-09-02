@@ -10,6 +10,8 @@ import { readTheme, themes } from './lib/theme'
 import { openingForSavedGame, openingLabel } from './lib/savedGameOpening'
 import { openingReflection } from './lib/openingReflection'
 import { deleteReviewJob, loadReviewJob, normalizeReviewJob } from './lib/reviewJob'
+import { flushSyncOutbox, knightshiftPocketBase, signIn, signOut } from './lib/sync/client'
+import { loadSyncOutbox } from './lib/sync/outbox'
 import PlayScreen from './screens/PlayScreen'
 import LearnScreen from './screens/LearnScreen'
 import './App.css'
@@ -66,8 +68,23 @@ function History() {
 
 function Settings() {
  const [defaults, setDefaults] = useState<Defaults>(readDefaults)
+ const [email, setEmail] = useState('')
+ const [password, setPassword] = useState('')
+ const [syncMessage, setSyncMessage] = useState(() => knightshiftPocketBase.authStore.isValid ? 'Sync is up to date.' : '')
+ const signedIn = knightshiftPocketBase.authStore.isValid
  function update(next: Partial<Defaults>) { const saved = { ...defaults, ...next }; setDefaults(saved); saveDefaults(saved) }
- return <Shell><section className="route-card"><p className="section-label">DEFAULTS</p><h1>Settings</h1><p className="review-copy">Quiet Study is Knightshift’s fixed visual system.</p><label htmlFor="default-side">Default side</label><select id="default-side" value={defaults.side} onChange={event => update({ side: event.target.value as 'w' | 'b' })}><option value="w">White</option><option value="b">Black</option></select><label htmlFor="default-difficulty">Default difficulty</label><select id="default-difficulty" value={defaults.difficulty} onChange={event => update({ difficulty: event.target.value as Defaults['difficulty'] })}><option>Casual</option><option>Steady</option><option>Sharp</option></select><p className="review-copy">These defaults apply to your next new game. Your completed games and active game remain local to this browser.</p></section></Shell>
+ async function syncNow() {
+   try { const { pushed } = await flushSyncOutbox(); setSyncMessage(pushed ? 'Sync is up to date.' : 'Sync is up to date.') }
+   catch { setSyncMessage('Sync needs attention. Check your connection and try again.') }
+ }
+ async function submit(event: React.FormEvent<HTMLFormElement>) {
+   event.preventDefault(); setSyncMessage('Signing in…')
+   try { await signIn(email, password); setPassword(''); await syncNow() }
+   catch { setSyncMessage('Sign in failed. Check your email and password, then try again.') }
+ }
+ function leave() { signOut(); setSyncMessage(''); window.location.reload() }
+ const pending = loadSyncOutbox().length
+ return <Shell><section className="route-card"><p className="section-label">DEFAULTS</p><h1>Settings</h1><p className="review-copy">Quiet Study is Knightshift’s fixed visual system.</p><label htmlFor="default-side">Default side</label><select id="default-side" value={defaults.side} onChange={event => update({ side: event.target.value as 'w' | 'b' })}><option value="w">White</option><option value="b">Black</option></select><label htmlFor="default-difficulty">Default difficulty</label><select id="default-difficulty" value={defaults.difficulty} onChange={event => update({ difficulty: event.target.value as Defaults['difficulty'] })}><option>Casual</option><option>Steady</option><option>Sharp</option></select><p className="review-copy">These defaults apply to your next new game. Active games remain on this device.</p></section><section className="route-card sync-settings"><p className="section-label">YOUR CHESS STUDY</p><h2>Bring your study together</h2>{signedIn ? <><p className="review-copy">{syncMessage || (pending ? 'Saved on this device. Sync will resume when you are online.' : 'Sync is up to date.')}</p><div className="settings-actions"><button className="undo-game" type="button" onClick={syncNow}>Sync now</button><button className="delete-game" type="button" onClick={leave}>Sign out</button></div></> : <><p className="review-copy">Sign in to bring your chess study to this device.</p><form className="sync-form" onSubmit={submit}><label htmlFor="sync-email">Email</label><input id="sync-email" type="email" autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} required /><label htmlFor="sync-password">Password</label><input id="sync-password" type="password" autoComplete="current-password" value={password} onChange={event => setPassword(event.target.value)} required /><button className="new-game" type="submit">Sign in</button></form>{syncMessage && <p className="review-copy" role="status">{syncMessage}</p>}</>}</section></Shell>
 }
 
 function reviewSquareStyles(moment: CriticalMoment): Record<string, CSSProperties> {

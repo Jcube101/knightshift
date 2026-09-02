@@ -10,6 +10,7 @@ describe('Knightshift home', () => {
   beforeEach(() => {
     cleanup()
     localStorage.clear()
+    window.history.pushState({}, '', '/')
   })
 
   it('uses personal, non-repetitive copy for the home entry point', () => {
@@ -34,6 +35,16 @@ describe('Knightshift home', () => {
     expect([...nav.querySelectorAll('a')].map(link => link.textContent)).toEqual(['Home', 'Play', 'Learn', 'Settings'])
     expect(screen.getByRole('link', { name: 'Learn' })).toHaveAttribute('href', '/learn')
     expect(nav.querySelector('a[href="/history"]')).toBeNull()
+  })
+
+  it('keeps sign-in and sync controls in Settings only', () => {
+    window.history.pushState({}, '', '/settings')
+    render(<App />)
+
+    expect(screen.getByText('Sign in to bring your chess study to this device.')).toBeInTheDocument()
+    expect(screen.getByLabelText('Email')).toHaveAttribute('type', 'email')
+    expect(screen.getByLabelText('Password')).toHaveAttribute('type', 'password')
+    expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument()
   })
 
   it('shows conservative opening context for a saved game', () => {
