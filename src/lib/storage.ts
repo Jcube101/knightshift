@@ -68,6 +68,12 @@ export function saveCompletedGame(game: SavedGame): void {
 export function deleteCompletedGame(gameId: string): void {
   const envelope: CompletedGamesEnvelope = { version: 1, games: loadSavedGames().filter(game => game.id !== gameId) }
   localStorage.setItem(completedGamesKey, JSON.stringify(envelope))
+  enqueueSyncOperation({
+    id: `game-tombstone:${gameId}`,
+    kind: 'game-tombstone',
+    payload: { collection: 'knightshift_games', clientId: gameId, deletedAt: new Date().toISOString() },
+    createdAt: new Date().toISOString(),
+  })
 }
 
 export function loadActiveGame(): ActiveGame | null {

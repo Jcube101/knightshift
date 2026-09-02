@@ -61,6 +61,7 @@ describe('completed-game storage', () => {
     saveCompletedGame({ id: 'remove', playedAt: '2026-08-24T09:00:00.000Z', result: '0-1', moves: ['d4'] })
     deleteCompletedGame('remove')
     expect(loadSavedGames().map(game => game.id)).toEqual(['keep'])
+    expect(loadSyncOutbox().map(operation => operation.id)).toContain('game-tombstone:remove')
   })
 
   it('returns no games when browser storage is empty', () => {
