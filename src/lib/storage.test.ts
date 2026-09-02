@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it } from 'vitest'
 import { loadSyncOutbox } from './sync/outbox'
-import { clearActiveGame, deleteCompletedGame, loadActiveGame, loadSavedGames, saveActiveGame, saveCompletedGame } from './storage'
+import { clearActiveGame, deleteCompletedGame, loadActiveGame, loadSavedGames, replaceSavedGamesForSync, saveActiveGame, saveCompletedGame } from './storage'
 
 beforeEach(() => localStorage.clear())
 
@@ -54,6 +54,16 @@ describe('completed-game storage', () => {
     localStorage.setItem('knightshift.completed-games', JSON.stringify([{ id: 'legacy', playedAt: '2026-08-22T09:00:00.000Z', result: '1-0', moves: ['e4'] }]))
 
     expect(loadSavedGames().map((game) => game.id)).toEqual(['legacy'])
+  })
+
+  it('imports merged shared completed games without creating new sync operations', () => {
+    saveCompletedGame({ id: 'local', playedAt: '2026-08-23T09:00:00.000Z', result: '1-0', moves: ['e4'] })
+    const queued = loadSyncOutbox()
+
+    replaceSavedGamesForSync([{ id: 'remote', playedAt: '2026-08-24T09:00:00.000Z', result: '0-1', moves: ['d4'] }])
+
+    expect(loadSavedGames().map(game => game.id)).toEqual(['remote'])
+    expect(loadSyncOutbox()).toEqual(queued)
   })
 
   it('deletes only the selected completed game', () => {

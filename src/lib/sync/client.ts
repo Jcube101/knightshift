@@ -1,11 +1,14 @@
 import PocketBase from 'pocketbase'
+import { loadSavedGames, replaceSavedGamesForSync } from '../storage'
+import { mergeRemoteGames } from './pull'
 import { acknowledgeSyncOperation, loadSyncOutbox, type SyncOperation } from './outbox'
 
-type RemoteRecord = { id: string; payload?: unknown }
+type RemoteRecord = { id: string; payload?: unknown; client_id?: string; deleted_at?: string }
 type CollectionClient = {
   create(data: Record<string, unknown>): Promise<RemoteRecord>
   update(id: string, data: Record<string, unknown>): Promise<RemoteRecord>
   getFirstListItem(filter: string): Promise<RemoteRecord>
+  getFullList(options?: Record<string, unknown>): Promise<RemoteRecord[]>
 }
 
 export type SyncClient = {
@@ -95,6 +98,20 @@ export async function flushSyncOutbox(client: SyncClient = knightshiftPocketBase
     pushed += 1
   }
   return { pushed }
+}
+
+export async function pullCompletedGames(client: SyncClient = knightshiftPocketBase): Promise<{ pulled: number }> {
+  const owner = signedInUser(client)
+  const records = await client.collection('knightshift_games').getFullList({
+    filter: `owner = ${quoted(owner)}`,
+    fields: 'client_id,payload,deleted_at',
+    sort: '-played_at',
+  })
+  const remote = records.map(record => ({ client_id: record.client_id ?? '', payload: record.payload, deleted_at: record.deleted_at ?? '' }))
+  const previous = loadSavedGames()
+  const merged = mergeRemoteGames(previous, remote)
+  replaceSavedGamesForSync(merged)
+  return { pulled: merged.filter(game => !previous.some(local => local.id === game.id)).length }
 }
 
 export async function signIn(email: string, password: string, client: SyncClient = knightshiftPocketBase): Promise<void> {

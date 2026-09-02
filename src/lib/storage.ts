@@ -65,6 +65,11 @@ export function saveCompletedGame(game: SavedGame): void {
   })
 }
 
+export function replaceSavedGamesForSync(games: SavedGame[]): void {
+  const envelope: CompletedGamesEnvelope = { version: 1, games }
+  localStorage.setItem(completedGamesKey, JSON.stringify(envelope))
+}
+
 export function deleteCompletedGame(gameId: string): void {
   const envelope: CompletedGamesEnvelope = { version: 1, games: loadSavedGames().filter(game => game.id !== gameId) }
   localStorage.setItem(completedGamesKey, JSON.stringify(envelope))

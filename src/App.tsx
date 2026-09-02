@@ -10,7 +10,7 @@ import { readTheme, themes } from './lib/theme'
 import { openingForSavedGame, openingLabel } from './lib/savedGameOpening'
 import { openingReflection } from './lib/openingReflection'
 import { deleteReviewJob, loadReviewJob, normalizeReviewJob } from './lib/reviewJob'
-import { flushSyncOutbox, knightshiftPocketBase, signIn, signOut } from './lib/sync/client'
+import { flushSyncOutbox, knightshiftPocketBase, pullCompletedGames, signIn, signOut } from './lib/sync/client'
 import { loadSyncOutbox } from './lib/sync/outbox'
 import PlayScreen from './screens/PlayScreen'
 import LearnScreen from './screens/LearnScreen'
@@ -74,7 +74,12 @@ function Settings() {
  const signedIn = knightshiftPocketBase.authStore.isValid
  function update(next: Partial<Defaults>) { const saved = { ...defaults, ...next }; setDefaults(saved); saveDefaults(saved) }
  async function syncNow() {
-   try { const { pushed } = await flushSyncOutbox(); setSyncMessage(pushed ? 'Sync is up to date.' : 'Sync is up to date.') }
+   try {
+     await pullCompletedGames()
+     await flushSyncOutbox()
+     await pullCompletedGames()
+     setSyncMessage('Sync is up to date.')
+   }
    catch { setSyncMessage('Sync needs attention. Check your connection and try again.') }
  }
  async function submit(event: React.FormEvent<HTMLFormElement>) {
