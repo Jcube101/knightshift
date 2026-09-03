@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import LearnScreen from './LearnScreen'
+import { setOpeningStudyState } from '../lib/repertoire'
 
 vi.mock('react-chessboard', () => ({ Chessboard: () => <div data-testid="chessboard" /> }))
 
@@ -44,6 +45,24 @@ describe('LearnScreen', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Hide opening' }))
     fireEvent.click(screen.getByRole('link', { name: 'All openings' }))
     expect(screen.queryByRole('link', { name: /Sicilian Defense/i })).not.toBeInTheDocument()
+  })
+
+  it('shows saved openings and restores hidden openings from My repertoire', () => {
+    setOpeningStudyState('sicilian-defense', 'saved')
+    setOpeningStudyState('kings-indian-defense', 'hidden')
+
+    render(
+      <MemoryRouter initialEntries={['/learn']}>
+        <Routes><Route path="/learn" element={<LearnScreen />} /></Routes>
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole('heading', { name: 'My repertoire' })).toBeInTheDocument()
+    expect(screen.getByText('Sicilian Defense')).toBeInTheDocument()
+    expect(screen.getByText('King’s Indian Defense')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Restore King’s Indian Defense' }))
+    expect(screen.queryByRole('button', { name: 'Restore King’s Indian Defense' })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /King’s Indian Defense/i })).toBeInTheDocument()
   })
 
   it('resets the move position when switching to another opening', () => {
