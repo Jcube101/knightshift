@@ -125,9 +125,9 @@ Do not deploy source files or a dirty working tree. Verify the live Vite bundle 
 
 ## Roadmap
 
-1. Local repertoire saving from the opening explorer, then private cross-device sync for saved and hidden study items
-2. Repertoire drilling, once saved opening content is real enough to deserve it
-3. Deeper board-grounded review explanations, only where the engine evidence supports them
+1. Repertoire drilling, once saved opening content is real enough to deserve it
+2. Deeper board-grounded review explanations, only where the engine evidence supports them
+3. Background and realtime study sync: automatically push completed study changes, receive owner-scoped updates across signed-in devices, and retain Settings as an explicit refresh/status surface. This is useful but not urgent; the current manual Sync now workflow remains supported.
 
 ## Licensing
 
