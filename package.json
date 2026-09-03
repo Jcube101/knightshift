@@ -9,7 +9,7 @@
     "lint": "oxlint --ignore-pattern 'public/**' --ignore-pattern '.playwright-browsers/**'",
     "preview": "vite preview",
     "test": "vitest run src",
-    "test:e2e": "PLAYWRIGHT_BROWSERS_PATH=.playwright-browsers playwright test"
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "chess.js": "^1.4.0",
@@ -21,7 +21,7 @@
     "stockfish": "^18.0.8"
   },
   "devDependencies": {
-    "@playwright/test": "^1.62.1",
+    "@playwright/test": "1.61.0",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.2",
     "@types/node": "^24.13.3",
