@@ -110,7 +110,7 @@ An active checkpoint captures the position, SAN/UCI history, player side, diffic
 
 Post-game reviews use a separate `knightshift.review-jobs` record. Each completed player-move evaluation is saved immediately. Home and History show the truthful saved-move count and return to Play for `Resume review`. A browser Worker cannot run after a tab closes, so the product promises resumption from saved work, not background execution. If the final player move ends the game, whether by checkmate, stalemate, or draw, Knightshift saves it without requesting an impossible post-game engine reply. When a review completes, Play remains open and offers `Open review`; it never redirects automatically.
 
-Clearing site storage clears saved games, review jobs, the active checkpoint, and Settings defaults. There is no sync or account system yet.
+Clearing site storage clears saved games, review jobs, the active checkpoint, and Settings defaults. Private Settings sign-in syncs completed games, review work, and Settings defaults across your own devices. Active games remain deliberately device-local and are never uploaded or pulled.
 
 ## Deployment
 
@@ -125,7 +125,7 @@ Do not deploy source files or a dirty working tree. Verify the live Vite bundle 
 
 ## Roadmap
 
-1. Local repertoire saving from the opening explorer
+1. Local repertoire saving from the opening explorer, then private cross-device sync for saved and hidden study items
 2. Repertoire drilling, once saved opening content is real enough to deserve it
 3. Deeper board-grounded review explanations, only where the engine evidence supports them
 

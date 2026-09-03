@@ -10,7 +10,7 @@ Current scope:
 
 - In-browser games against Stockfish
 - White and Black play, with Settings defaults applied only when starting a new game
-- Browser-local active-game and completed-game storage
+- Browser-local active-game storage, plus private Settings-only sync for completed games, review work, and Settings defaults
 - Deliberate post-game analysis, saved review moments, and proof-backed recurring insights
 - Broad opening explorer with named variations
 - Conservative opening context for saved completed games and reviews
@@ -20,7 +20,7 @@ Planned, not yet built:
 
 - Local repertoire saving and drilling
 
-Do not add accounts, cloud sync, PGN import, social features, or external chess-platform integration unless explicitly requested.
+Private accounts and Settings-only sync are approved product scope. Keep active games device-local: never upload, pull, merge, or migrate `knightshift.active-game`. Do not add PGN import, social features, or external chess-platform integration unless explicitly requested.
 
 ## Design specification
 
