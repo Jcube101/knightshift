@@ -1,4 +1,4 @@
-import { readDefaults } from '../defaults'
+import { readDefaults, readDefaultsRevision } from '../defaults'
 import { loadReviewJobs } from '../reviewJob'
 import { loadSavedGames } from '../storage'
 import { reviewCandidateRecord, settingsRecord } from './records'
@@ -27,7 +27,8 @@ export function migrateLocalStudyForSync(owner: string): { queued: number } {
   }
 
   const defaults = readDefaults()
-  enqueueSyncOperation({ id: 'settings', kind: 'settings', payload: settingsRecord(defaults, 0), createdAt: new Date().toISOString() })
+  const revision = Math.max(Date.now(), readDefaultsRevision() + 1)
+  enqueueSyncOperation({ id: 'settings', kind: 'settings', payload: settingsRecord(defaults, revision), createdAt: new Date().toISOString() })
   queued += 1
 
   localStorage.setItem(migrationKey(owner), 'complete')
