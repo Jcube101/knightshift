@@ -1,11 +1,12 @@
 import PocketBase from 'pocketbase'
+import { applyRemoteDefaults } from '../defaults'
 import { loadSavedGames, replaceSavedGamesForSync } from '../storage'
 import { loadReviewJobs, replaceReviewJobsForSync } from '../reviewJob'
 import { mergeRemoteGames } from './pull'
 import { mergeReviewJobs } from './reviews'
 import { acknowledgeSyncOperation, loadSyncOutbox, type SyncOperation } from './outbox'
 
-type RemoteRecord = { id: string; payload?: unknown; client_id?: string; deleted_at?: string; game_client_id?: string; move_index?: number }
+type RemoteRecord = { id: string; payload?: unknown; client_id?: string; deleted_at?: string; game_client_id?: string; move_index?: number; revision?: number }
 type CollectionClient = {
   create(data: Record<string, unknown>): Promise<RemoteRecord>
   update(id: string, data: Record<string, unknown>): Promise<RemoteRecord>
@@ -87,6 +88,7 @@ async function pushOperation(client: SyncClient, owner: string, operation: SyncO
 
   const record = operation.payload as { revision: number; payloadVersion: number; payload: unknown }; const collection = client.collection('knightshift_settings')
   const found = await existing(collection, `owner = ${quoted(owner)}`)
+  if (found && typeof found.revision === 'number' && found.revision >= record.revision) return
   const data = { owner, revision: record.revision, payload_version: record.payloadVersion, payload: record.payload }
   if (found) await collection.update(found.id, data); else await collection.create(data)
 }
@@ -130,6 +132,13 @@ export async function pullReviewJobs(client: SyncClient = knightshiftPocketBase)
   )
   replaceReviewJobsForSync(merged)
   return { pulled: merged.length - previous.length }
+}
+
+export async function pullSettings(client: SyncClient = knightshiftPocketBase): Promise<boolean> {
+  const owner = signedInUser(client)
+  const record = await existing(client.collection('knightshift_settings'), `owner = ${quoted(owner)}`)
+  if (!record || typeof record.revision !== 'number' || !record.payload || typeof record.payload !== 'object') return false
+  return applyRemoteDefaults(record.payload as import('../defaults').Defaults, record.revision)
 }
 
 export async function signIn(email: string, password: string, client: SyncClient = knightshiftPocketBase): Promise<void> {
