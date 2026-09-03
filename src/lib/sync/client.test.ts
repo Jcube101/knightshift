@@ -62,6 +62,15 @@ describe('PocketBase sync client', () => {
     expect(loadSyncOutbox()).toHaveLength(1)
   })
 
+  it('stores zero-based review candidates as one-based PocketBase move indices', async () => {
+    enqueueSyncOperation({ id: 'candidate:game-1:0', kind: 'review-candidate', payload: { collection: 'knightshift_review_candidates', gameClientId: 'game-1', moveIndex: 0, syncKey: 'game-1:0', payloadVersion: 1, payload: { moveIndex: 0, played: 'e4', best: 'e5', loss: 90 } }, createdAt: '2026-09-02T10:00:00.000Z' })
+    const pb = client()
+
+    await flushSyncOutbox(pb)
+
+    expect((pb.collection.mock.results[0].value.create as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith(expect.objectContaining({ move_index: 1 }))
+  })
+
   it('does not overwrite conflicting review evidence or acknowledge the operation', async () => {
     enqueueSyncOperation({ id: 'candidate:game-1:0', kind: 'review-candidate', payload: { collection: 'knightshift_review_candidates', gameClientId: 'game-1', moveIndex: 0, syncKey: 'game-1:0', payloadVersion: 1, payload: { moveIndex: 0, played: 'e4', best: 'e5', loss: 90 } }, createdAt: '2026-09-02T10:00:00.000Z' })
     const pb = client({ existing: { id: 'remote-candidate-1', payload: { moveIndex: 0, played: 'e4', best: 'd4', loss: 90 } } })

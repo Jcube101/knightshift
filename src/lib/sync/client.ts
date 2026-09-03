@@ -74,7 +74,7 @@ async function pushOperation(client: SyncClient, owner: string, operation: SyncO
       if (stable(found.payload) !== stable(record.payload)) throw new Error(`Review candidate conflict at ${record.syncKey}.`)
       return
     }
-    await collection.create({ owner, game_client_id: record.gameClientId, move_index: record.moveIndex, sync_key: record.syncKey, payload_version: record.payloadVersion, payload: record.payload })
+    await collection.create({ owner, game_client_id: record.gameClientId, move_index: record.moveIndex + 1, sync_key: record.syncKey, payload_version: record.payloadVersion, payload: record.payload })
     return
   }
 
@@ -128,7 +128,7 @@ export async function pullReviewJobs(client: SyncClient = knightshiftPocketBase)
   const merged = mergeReviewJobs(
     previous,
     statusRecords.flatMap(record => record.game_client_id && record.payload && typeof record.payload === 'object' ? [{ gameClientId: record.game_client_id, payload: record.payload as { status: 'queued' | 'paused' | 'failed' | 'complete'; nextMoveIndex: number; totalPlayerMoves: number } }] : []),
-    candidateRecords.flatMap(record => record.game_client_id && typeof record.move_index === 'number' && record.payload && typeof record.payload === 'object' ? [{ gameClientId: record.game_client_id, moveIndex: record.move_index, payload: record.payload as import('../analysis').CandidateMoment }] : []),
+    candidateRecords.flatMap(record => record.game_client_id && typeof record.move_index === 'number' && record.move_index > 0 && record.payload && typeof record.payload === 'object' ? [{ gameClientId: record.game_client_id, moveIndex: record.move_index - 1, payload: record.payload as import('../analysis').CandidateMoment }] : []),
   )
   replaceReviewJobsForSync(merged)
   return { pulled: merged.length - previous.length }
