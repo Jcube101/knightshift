@@ -19,6 +19,8 @@ function jobs(): ReviewJob[] {
   } catch { return [] }
 }
 
+export function loadReviewJobs(): ReviewJob[] { return jobs() }
+export function replaceReviewJobsForSync(next: ReviewJob[]): void { localStorage.setItem(reviewJobsKey, JSON.stringify(next)) }
 export function loadReviewJob(gameId: string): ReviewJob | null { return jobs().find(job => job.gameId === gameId) ?? null }
 export function saveReviewJob(job: ReviewJob): void {
   localStorage.setItem(reviewJobsKey, JSON.stringify([job, ...jobs().filter(saved => saved.gameId !== job.gameId)]))

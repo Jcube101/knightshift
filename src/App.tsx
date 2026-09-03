@@ -10,7 +10,8 @@ import { readTheme, themes } from './lib/theme'
 import { openingForSavedGame, openingLabel } from './lib/savedGameOpening'
 import { openingReflection } from './lib/openingReflection'
 import { deleteReviewJob, loadReviewJob, normalizeReviewJob } from './lib/reviewJob'
-import { flushSyncOutbox, knightshiftPocketBase, pullCompletedGames, signIn, signOut } from './lib/sync/client'
+import { flushSyncOutbox, knightshiftPocketBase, pullCompletedGames, pullReviewJobs, signIn, signOut } from './lib/sync/client'
+import { migrateLocalStudyForSync } from './lib/sync/migration'
 import { loadSyncOutbox } from './lib/sync/outbox'
 import PlayScreen from './screens/PlayScreen'
 import LearnScreen from './screens/LearnScreen'
@@ -75,9 +76,14 @@ function Settings() {
  function update(next: Partial<Defaults>) { const saved = { ...defaults, ...next }; setDefaults(saved); saveDefaults(saved) }
  async function syncNow() {
    try {
+     const owner = knightshiftPocketBase.authStore.record?.id
+     if (!owner) throw new Error('Sign in before syncing.')
+     migrateLocalStudyForSync(owner)
      await pullCompletedGames()
+     await pullReviewJobs()
      await flushSyncOutbox()
      await pullCompletedGames()
+     await pullReviewJobs()
      setSyncMessage('Sync is up to date.')
    }
    catch { setSyncMessage('Sync needs attention. Check your connection and try again.') }

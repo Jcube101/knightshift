@@ -1,9 +1,11 @@
 import PocketBase from 'pocketbase'
 import { loadSavedGames, replaceSavedGamesForSync } from '../storage'
+import { loadReviewJobs, replaceReviewJobsForSync } from '../reviewJob'
 import { mergeRemoteGames } from './pull'
+import { mergeReviewJobs } from './reviews'
 import { acknowledgeSyncOperation, loadSyncOutbox, type SyncOperation } from './outbox'
 
-type RemoteRecord = { id: string; payload?: unknown; client_id?: string; deleted_at?: string }
+type RemoteRecord = { id: string; payload?: unknown; client_id?: string; deleted_at?: string; game_client_id?: string; move_index?: number }
 type CollectionClient = {
   create(data: Record<string, unknown>): Promise<RemoteRecord>
   update(id: string, data: Record<string, unknown>): Promise<RemoteRecord>
@@ -112,6 +114,22 @@ export async function pullCompletedGames(client: SyncClient = knightshiftPocketB
   const merged = mergeRemoteGames(previous, remote)
   replaceSavedGamesForSync(merged)
   return { pulled: merged.filter(game => !previous.some(local => local.id === game.id)).length }
+}
+
+export async function pullReviewJobs(client: SyncClient = knightshiftPocketBase): Promise<{ pulled: number }> {
+  const owner = signedInUser(client)
+  const [statusRecords, candidateRecords] = await Promise.all([
+    client.collection('knightshift_review_status').getFullList({ filter: `owner = ${quoted(owner)}`, fields: 'game_client_id,payload' }),
+    client.collection('knightshift_review_candidates').getFullList({ filter: `owner = ${quoted(owner)}`, fields: 'game_client_id,move_index,payload' }),
+  ])
+  const previous = loadReviewJobs()
+  const merged = mergeReviewJobs(
+    previous,
+    statusRecords.flatMap(record => record.game_client_id && record.payload && typeof record.payload === 'object' ? [{ gameClientId: record.game_client_id, payload: record.payload as { status: 'queued' | 'paused' | 'failed' | 'complete'; nextMoveIndex: number; totalPlayerMoves: number } }] : []),
+    candidateRecords.flatMap(record => record.game_client_id && typeof record.move_index === 'number' && record.payload && typeof record.payload === 'object' ? [{ gameClientId: record.game_client_id, moveIndex: record.move_index, payload: record.payload as import('../analysis').CandidateMoment }] : []),
+  )
+  replaceReviewJobsForSync(merged)
+  return { pulled: merged.length - previous.length }
 }
 
 export async function signIn(email: string, password: string, client: SyncClient = knightshiftPocketBase): Promise<void> {
