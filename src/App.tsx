@@ -10,7 +10,7 @@ import { readTheme, themes } from './lib/theme'
 import { openingForSavedGame, openingLabel } from './lib/savedGameOpening'
 import { openingReflection } from './lib/openingReflection'
 import { deleteReviewJob, loadReviewJob, normalizeReviewJob } from './lib/reviewJob'
-import { flushSyncOutbox, knightshiftPocketBase, pullCompletedGames, pullReviewJobs, pullSettings, signIn, signOut } from './lib/sync/client'
+import { flushSyncOutbox, knightshiftPocketBase, pullCompletedGames, pullLearnCustomization, pullReviewJobs, pullSettings, signIn, signOut } from './lib/sync/client'
 import { migrateLocalStudyForSync } from './lib/sync/migration'
 import { loadSyncOutbox } from './lib/sync/outbox'
 import PlayScreen from './screens/PlayScreen'
@@ -82,10 +82,12 @@ function Settings() {
      await pullCompletedGames()
      await pullReviewJobs()
      await pullSettings()
+     await pullLearnCustomization()
      await flushSyncOutbox()
      await pullCompletedGames()
      await pullReviewJobs()
      await pullSettings()
+     await pullLearnCustomization()
      setSyncMessage('Sync is up to date.')
    }
    catch { setSyncMessage('Sync needs attention. Check your connection and try again.') }

@@ -27,6 +27,25 @@ describe('LearnScreen', () => {
     expect(black).toHaveAttribute('aria-pressed', 'true')
   })
 
+
+  it('lets a learner save an opening and remove a hidden opening from the catalogue', () => {
+    render(
+      <MemoryRouter initialEntries={['/learn/sicilian-defense']}>
+        <Routes>
+          <Route path="/learn" element={<LearnScreen />} />
+          <Route path="/learn/:openingId" element={<LearnScreen />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save opening' }))
+    expect(screen.getByRole('button', { name: 'Saved opening' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Hide opening' }))
+    fireEvent.click(screen.getByRole('link', { name: 'All openings' }))
+    expect(screen.queryByRole('link', { name: /Sicilian Defense/i })).not.toBeInTheDocument()
+  })
+
   it('resets the move position when switching to another opening', () => {
     render(
       <MemoryRouter initialEntries={['/learn/kings-indian-defense']}>

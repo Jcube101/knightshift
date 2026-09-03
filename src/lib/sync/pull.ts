@@ -1,5 +1,14 @@
 import type { SavedGame } from '../storage'
 
+export type LearnCustomizationEntry = { openingId: string; state: 'saved' | 'hidden' }
+type RemoteLearnCustomization = { opening_key: string; state: 'added' | 'hidden' }
+
+export function mergeRemoteLearnCustomization(local: LearnCustomizationEntry[], remote: RemoteLearnCustomization[]): LearnCustomizationEntry[] {
+  const merged = new Map(local.map(entry => [entry.openingId, entry.state]))
+  for (const record of remote) merged.set(record.opening_key, record.state === 'added' ? 'saved' : 'hidden')
+  return [...merged.entries()].map(([openingId, state]) => ({ openingId, state }))
+}
+
 type RemoteGame = { client_id: string; payload: unknown; deleted_at: string }
 
 function stable(value: unknown): string {

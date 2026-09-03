@@ -78,4 +78,24 @@ describe('PocketBase sync client', () => {
     await expect(flushSyncOutbox(pb)).rejects.toThrow('Review candidate conflict at game-1:0.')
     expect(loadSyncOutbox()).toHaveLength(1)
   })
+
+  it('creates an owner-scoped learn customisation record with the added wire state', async () => {
+    enqueueSyncOperation({ id: 'learn:sicilian-defense', kind: 'learn-customization', payload: { collection: 'knightshift_learn_customization', openingKey: 'sicilian-defense', state: 'added', revision: 5, payloadVersion: 1 }, createdAt: '2026-09-03T10:00:00.000Z' })
+    const pb = client()
+
+    await expect(flushSyncOutbox(pb)).resolves.toEqual({ pushed: 1 })
+
+    expect(pb.collection).toHaveBeenCalledWith('knightshift_learn_customization')
+    expect((pb.collection.mock.results[0].value.create as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith({ owner: 'user-1', opening_key: 'sicilian-defense', state: 'added', revision: 5, payload_version: 1 })
+    expect(loadSyncOutbox()).toEqual([])
+  })
+
+  it('skips an out-of-date learn customisation write instead of regressing the remote revision', async () => {
+    enqueueSyncOperation({ id: 'learn:sicilian-defense', kind: 'learn-customization', payload: { collection: 'knightshift_learn_customization', openingKey: 'sicilian-defense', state: 'hidden', revision: 3, payloadVersion: 1 }, createdAt: '2026-09-03T10:00:00.000Z' })
+    const pb = client({ existing: { id: 'remote-learn-1', revision: 9 } })
+
+    await flushSyncOutbox(pb)
+
+    expect((pb.collection.mock.results[0].value.update as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled()
+  })
 })

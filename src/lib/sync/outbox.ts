@@ -1,6 +1,6 @@
 export type SyncOperation = {
   id: string
-  kind: 'completed-game' | 'game-tombstone' | 'review-candidate' | 'review-status' | 'settings'
+  kind: 'completed-game' | 'game-tombstone' | 'review-candidate' | 'review-status' | 'settings' | 'learn-customization'
   payload: unknown
   createdAt: string
 }
@@ -11,7 +11,7 @@ function validOperation(value: unknown): value is SyncOperation {
   if (!value || typeof value !== 'object') return false
   const operation = value as Partial<SyncOperation>
   return typeof operation.id === 'string'
-    && (operation.kind === 'completed-game' || operation.kind === 'game-tombstone' || operation.kind === 'review-candidate' || operation.kind === 'review-status' || operation.kind === 'settings')
+    && (operation.kind === 'completed-game' || operation.kind === 'game-tombstone' || operation.kind === 'review-candidate' || operation.kind === 'review-status' || operation.kind === 'settings' || operation.kind === 'learn-customization')
     && typeof operation.createdAt === 'string'
     && 'payload' in operation
 }

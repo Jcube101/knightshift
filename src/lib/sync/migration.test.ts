@@ -2,6 +2,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { loadActiveGame, saveActiveGame, saveCompletedGame } from '../storage'
 import { saveReviewJob } from '../reviewJob'
+import { setOpeningStudyState } from '../repertoire'
 import { loadSyncOutbox } from './outbox'
 import { migrateLocalStudyForSync } from './migration'
 
@@ -23,5 +24,14 @@ describe('first-sync migration', () => {
 
     expect(migrateLocalStudyForSync('user-1')).toEqual({ queued: 0 })
     expect(loadSyncOutbox()).toHaveLength(4)
+  })
+
+  it('queues saved and hidden Learn customisation entries alongside completed study data', () => {
+    setOpeningStudyState('sicilian-defense', 'saved')
+    setOpeningStudyState('kings-indian-defense', 'hidden')
+    localStorage.removeItem('knightshift.sync-outbox')
+
+    expect(migrateLocalStudyForSync('user-1')).toEqual({ queued: 3 })
+    expect(loadSyncOutbox().filter(operation => operation.kind === 'learn-customization').map(operation => (operation.payload as { openingKey: string; state: string }).state).toSorted()).toEqual(['added', 'hidden'])
   })
 })

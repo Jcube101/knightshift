@@ -51,6 +51,18 @@ export function reviewCandidateRecord(gameClientId: string, candidate: Candidate
   }
 }
 
+export type LearnCustomizationRecord = {
+  collection: 'knightshift_learn_customization'
+  openingKey: string
+  state: 'added' | 'hidden'
+  revision: number
+  payloadVersion: 1
+}
+
+export function learnCustomizationRecord(openingKey: string, state: 'saved' | 'hidden', revision: number): LearnCustomizationRecord {
+  return { collection: 'knightshift_learn_customization', openingKey, state: state === 'saved' ? 'added' : 'hidden', revision, payloadVersion: 1 }
+}
+
 export function settingsRecord(payload: Defaults, revision: number): SettingsRecord {
   return { collection: 'knightshift_settings', revision, payloadVersion: 1, payload }
 }

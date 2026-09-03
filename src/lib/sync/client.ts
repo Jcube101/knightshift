@@ -2,11 +2,12 @@ import PocketBase from 'pocketbase'
 import { applyRemoteDefaults } from '../defaults'
 import { loadSavedGames, replaceSavedGamesForSync } from '../storage'
 import { loadReviewJobs, replaceReviewJobsForSync } from '../reviewJob'
-import { mergeRemoteGames } from './pull'
+import { loadRepertoireEntries, replaceRepertoireEntriesForSync } from '../repertoire'
+import { mergeRemoteGames, mergeRemoteLearnCustomization } from './pull'
 import { mergeReviewJobs } from './reviews'
 import { acknowledgeSyncOperation, loadSyncOutbox, type SyncOperation } from './outbox'
 
-type RemoteRecord = { id: string; payload?: unknown; client_id?: string; deleted_at?: string; game_client_id?: string; move_index?: number; revision?: number }
+type RemoteRecord = { id: string; payload?: unknown; client_id?: string; deleted_at?: string; game_client_id?: string; move_index?: number; revision?: number; opening_key?: string; state?: string }
 type CollectionClient = {
   create(data: Record<string, unknown>): Promise<RemoteRecord>
   update(id: string, data: Record<string, unknown>): Promise<RemoteRecord>
@@ -86,6 +87,16 @@ async function pushOperation(client: SyncClient, owner: string, operation: SyncO
     return
   }
 
+  if (operation.kind === 'learn-customization') {
+    const record = operation.payload as { openingKey: string; state: 'added' | 'hidden'; revision: number; payloadVersion: number }
+    const collection = client.collection('knightshift_learn_customization')
+    const found = await existing(collection, `owner = ${quoted(owner)} && opening_key = ${quoted(record.openingKey)}`)
+    if (found && typeof found.revision === 'number' && found.revision >= record.revision) return
+    const data = { owner, opening_key: record.openingKey, state: record.state, revision: record.revision, payload_version: record.payloadVersion }
+    if (found) await collection.update(found.id, data); else await collection.create(data)
+    return
+  }
+
   const record = operation.payload as { revision: number; payloadVersion: number; payload: unknown }; const collection = client.collection('knightshift_settings')
   const found = await existing(collection, `owner = ${quoted(owner)}`)
   if (found && typeof found.revision === 'number' && found.revision >= record.revision) return
@@ -139,6 +150,19 @@ export async function pullSettings(client: SyncClient = knightshiftPocketBase): 
   const record = await existing(client.collection('knightshift_settings'), `owner = ${quoted(owner)}`)
   if (!record || typeof record.revision !== 'number' || !record.payload || typeof record.payload !== 'object') return false
   return applyRemoteDefaults(record.payload as import('../defaults').Defaults, record.revision)
+}
+
+export async function pullLearnCustomization(client: SyncClient = knightshiftPocketBase): Promise<{ pulled: number }> {
+  const owner = signedInUser(client)
+  const records = await client.collection('knightshift_learn_customization').getFullList({
+    filter: `owner = ${quoted(owner)}`,
+    fields: 'opening_key,state',
+  })
+  const remote = records.flatMap(record => typeof record.opening_key === 'string' && record.opening_key.length > 0 && (record.state === 'added' || record.state === 'hidden') ? [{ opening_key: record.opening_key, state: record.state as 'added' | 'hidden' }] : [])
+  const previous = loadRepertoireEntries()
+  const merged = mergeRemoteLearnCustomization(previous, remote)
+  replaceRepertoireEntriesForSync(merged)
+  return { pulled: merged.length - previous.length }
 }
 
 export async function signIn(email: string, password: string, client: SyncClient = knightshiftPocketBase): Promise<void> {

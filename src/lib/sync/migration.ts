@@ -1,7 +1,8 @@
 import { readDefaults, readDefaultsRevision } from '../defaults'
 import { loadReviewJobs } from '../reviewJob'
 import { loadSavedGames } from '../storage'
-import { reviewCandidateRecord, settingsRecord } from './records'
+import { loadRepertoireEntries } from '../repertoire'
+import { learnCustomizationRecord, reviewCandidateRecord, settingsRecord } from './records'
 import { enqueueSyncOperation } from './outbox'
 
 function migrationKey(owner: string): string { return `knightshift.sync-migration-v1:${owner}` }
@@ -30,6 +31,12 @@ export function migrateLocalStudyForSync(owner: string): { queued: number } {
   const revision = Math.max(Date.now(), readDefaultsRevision() + 1)
   enqueueSyncOperation({ id: 'settings', kind: 'settings', payload: settingsRecord(defaults, revision), createdAt: new Date().toISOString() })
   queued += 1
+
+  for (const entry of loadRepertoireEntries()) {
+    const record = learnCustomizationRecord(entry.openingId, entry.state, Date.now())
+    enqueueSyncOperation({ id: `learn:${entry.openingId}`, kind: 'learn-customization', payload: record, createdAt: new Date().toISOString() })
+    queued += 1
+  }
 
   localStorage.setItem(migrationKey(owner), 'complete')
   return { queued }
